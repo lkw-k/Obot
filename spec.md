@@ -509,7 +509,7 @@ spec Section 10 — 2. Loading + schema analysis
 
 - **Merge only when the user asks**, after CI passes and the code review has no unresolved high-severity issues.
 - Use **"Create a merge commit"** so the per-task commits from 11.2 are preserved in `main` history.
-- Delete the branch after merging.
+- Do not delete the branch after merging. Keep every feature branch (local and remote) as a record of its work.
 
 ### 11.6 Example Instruction (Claude Code)
 

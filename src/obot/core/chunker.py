@@ -1,0 +1,1 @@
+"""Record -> text for embedding."""

@@ -409,23 +409,17 @@ git switch main && git pull
 git switch -c feat/loader
 ```
 
-### 11.2 Commits: split by file / function
+### 11.2 Commits: one commit per task
 
-After making changes, **do not commit everything at once.** Split commits by logical unit.
+Make **one commit per completed task** (one user request / one feature), not per file or function. Implementation, tests, and config/docs for that task go in the same commit.
 
-- One commit = one purpose. Group files by what they do, not by when they were edited.
-- Stage selectively with `git add <file>` (or `git add -p` for partial changes). Never use `git add .` for a mixed set of changes.
-- Commit implementation, tests, and config/docs separately when they serve different purposes.
-- Before committing, review `git status` and `git diff --staged` to confirm only the intended changes are included.
+- Commit only when the task is done and verified (tests and lint pass).
+- Stage the task's files explicitly with `git add <file>`. Never use `git add .` if unrelated changes are in the working tree.
+- Before committing, review `git status` and `git diff --staged` to confirm only the task's changes are included.
 
-Example — changes to loader, schema, tests, and config in one session:
+Example — implementing loader + schema with tests in one task:
 ```
-feat(loader): add JSON/JSONL/CSV loading and nested flattening
-feat(loader): add CSV numeric conversion and encoding fallback
-feat(schema): add rule-based field role classification
-test(loader): add tests for JSON shapes and CSV encodings
-test(schema): add tests for each role rule
-chore(config): add schema_analysis section to config.example.yaml
+feat(loader): add file loading and rule-based schema analysis with tests
 ```
 
 Commit message format: `<type>(<scope>): <summary>`
@@ -446,7 +440,7 @@ Run `bash scripts/verify.sh`. It performs steps 1–5 and prints only a short PA
 2. `git status --porcelain` — no uncommitted changes.
 3. `uv run ruff check . --quiet` and `uv run ruff format --check . --quiet` — no lint or format errors.
 4. `uv run pytest -q` — all tests pass.
-5. `git fetch origin` then `git diff --name-only origin/main...HEAD` — no `.env`, `data/`, or `storage/` files.
+5. `git fetch origin` then `git diff --name-only origin/main...HEAD` — no `.env`, `storage/`, or `data/` files other than `data/.gitkeep`.
 
 Then check manually:
 6. `git log origin/main..HEAD --oneline` — the commits follow 11.2 and match the current phase.
@@ -514,9 +508,9 @@ spec Section 10 — 2. Loading + schema analysis
 ### 11.5 Merge
 
 - **Merge only when the user asks**, after CI passes and the code review has no unresolved high-severity issues.
-- Use **"Create a merge commit"** so the per-file commits from 11.2 are preserved in `main` history.
+- Use **"Create a merge commit"** so the per-task commits from 11.2 are preserved in `main` history.
 - Delete the branch after merging.
 
 ### 11.6 Example Instruction (Claude Code)
 
-> Current branch is `feat/loader`. Implement only phase 2 of spec.md Section 10, satisfying its completion criteria and the tests in Section 9. Commit changes split by file/function following 11.2. Do not push until I ask.
+> Current branch is `feat/loader`. Implement only phase 2 of spec.md Section 10, satisfying its completion criteria and the tests in Section 9. Commit once when the task is done, following 11.2. Do not push until I ask.

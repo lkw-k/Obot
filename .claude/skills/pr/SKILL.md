@@ -40,7 +40,9 @@ It returns a review in the §11.4 comment format.
 ## 4. Post the review
 
 ```bash
-gh pr comment <number> --body "<review from code-reviewer>"
+gh pr comment <number> --body-file - <<'EOF'
+<review from code-reviewer>
+EOF
 ```
 (GitHub does not allow approving your own PR, so use a comment.)
 

@@ -42,6 +42,6 @@ uv run obot serve | build [--bot NAME] | ask NAME "question"
 
 ## Workflow skills
 
-- `commit` — split commits by logical unit (§11.2)
+- `commit` — one commit per completed task (§11.2)
 - `push` — verify then push (§11.3)
 - `pr` — open PR + code review via the `code-reviewer` agent (§11.4)

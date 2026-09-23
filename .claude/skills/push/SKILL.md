@@ -16,7 +16,7 @@ Otherwise run the steps directly:
 2. `git status --porcelain` — must be empty.
 3. `uv run ruff check . --quiet` and `uv run ruff format --check . --quiet` — no errors.
 4. `uv run pytest -q` — all tests pass.
-5. `git fetch origin` then `git diff --name-only origin/main...HEAD` — no `.env`, `data/`, or `storage/` files.
+5. `git fetch origin` then `git diff --name-only origin/main...HEAD` — no `.env`, `storage/`, or `data/` files other than `data/.gitkeep`.
 
 ## Manual checks
 

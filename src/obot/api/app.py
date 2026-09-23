@@ -1,1 +1,1 @@
-"""FastAPI app and lifespan."""
+"""FastAPI app, lifespan, error handlers."""

@@ -58,24 +58,24 @@ obot/
 │   │   ├── router.py       # search / aggregate classification
 │   │   ├── sql_agent.py    # Text-to-SQL, safe execution
 │   │   ├── generator.py    # prompt building, answer generation
-│   │   ├── builder.py      # build pipeline, change detection
+│   │   ├── builder.py      # build pipeline, change detection, bot status, background build thread
 │   │   └── bot.py          # Bot object: ask(question, history)
 │   ├── llm/
-│   │   ├── base.py         # LLMClient interface
+│   │   ├── base.py         # LLMClient interface, LLMError, provider factory
 │   │   ├── ollama.py
 │   │   ├── anthropic.py
 │   │   └── openai.py
 │   ├── api/
-│   │   ├── app.py          # FastAPI app, lifespan
+│   │   ├── app.py          # FastAPI app, lifespan, error handlers ({"error": {...}})
 │   │   ├── routes.py
 │   │   ├── schemas.py      # request/response models
 │   │   └── auth.py
-│   ├── config.py
+│   ├── config.py           # settings, bot discovery, name normalization / collision check
 │   └── cli.py
 ├── data/                   # user data (git-ignored, only .gitkeep committed)
 ├── storage/                # build output (git-ignored)
 ├── examples/               # sample data
-├── tests/
+├── tests/                  # conftest.py: fake embedder / LLM
 ├── .github/workflows/test.yml
 ├── scripts/verify.sh       # pre-push verification (Section 11.3)
 ├── config.example.yaml

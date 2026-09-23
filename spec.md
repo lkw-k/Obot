@@ -280,7 +280,9 @@ Input: system prompt + conversation history (last 10 messages) + context + quest
 
 ```python
 class LLMClient(Protocol):
-    def chat(self, system: str, messages: list[dict], json_mode: bool = False) -> str: ...
+    def chat(
+        self, system: str, messages: list[dict], json_mode: bool = False
+    ) -> str: ...
 ```
 
 - The three providers implement only this interface.

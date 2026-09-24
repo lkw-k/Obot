@@ -1,0 +1,23 @@
+llm:
+  provider: ollama          # ollama | anthropic | openai
+  model: qwen2.5:7b
+  base_url: null            # custom Ollama address (default http://localhost:11434)
+  temperature: 0.2
+
+schema_analysis:
+  use_llm: false            # if true, refine rule-based results with the LLM
+
+retrieval:
+  top_k: 5
+
+routing:
+  enabled: true             # if false, every question is handled as search
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+bots: []                    # if empty, auto-discover files in data/
+# bots:
+#   - name: products
+#     files: [data/products.json]

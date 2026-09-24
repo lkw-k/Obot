@@ -1,1 +1,1 @@
-"""LLMClient interface."""
+"""LLMClient interface, LLMError, provider factory."""

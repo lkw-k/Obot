@@ -40,11 +40,13 @@ It returns a review in the §11.4 comment format.
 ## 4. Post the review
 
 ```bash
-gh pr comment <number> --body "<review from code-reviewer>"
+gh pr comment <number> --body-file - <<'EOF'
+<review from code-reviewer>
+EOF
 ```
 (GitHub does not allow approving your own PR, so use a comment.)
 
 ## 5. Report
 
 Give the user the PR URL and the verdict. If there are issues, list them and fix them before any merge.
-Do not merge unless the user asks (§11.5: merge commit, delete branch after).
+Do not merge unless the user asks (§11.5: `gh pr merge <number> --merge`, never `--delete-branch`; keep the branch).

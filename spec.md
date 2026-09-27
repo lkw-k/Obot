@@ -149,13 +149,13 @@ load → change detection → schema analysis → chunking → embedding → sto
 |---|---|
 | JSON | If the top level is an array of objects, use it. If the top level is an object with exactly one array field, use that array. Otherwise, error |
 | JSONL | One line = one record; skip blank lines |
-| CSV | Try encoding `utf-8-sig`, then `cp949`. Header required. All values are read as strings, so try converting int → float; empty strings become null |
+| CSV | Try encoding `utf-8-sig`, then `cp949`. Header required. All values are read as strings; numeric columns are converted to int / float (see below); empty strings become null |
 
 - Normalize records to `dict[str, Any]`.
 - Flatten nested objects with dot notation (`{"a": {"b": 1}}` → `{"a.b": 1}`).
 - Store list values as JSON strings.
 - Skip records that fail to parse and log a warning. If all records fail, the build fails.
-- CSV numbers: only plain decimal literals convert (`42`, `-7`, `3.5`, `1e3`); `1_000`, `nan`, `inf` stay strings. Rows with more cells than the header are skipped; missing cells become null.
+- CSV numbers are decided per column: a column is converted (int where possible, else float) only if every non-empty cell is a plain decimal literal (`42`, `-7`, `3.5`, `1e3`) with no leading zero. Otherwise the whole column stays strings, so codes like `007` or zip code `01234` keep their zeros and a column never mixes numbers and strings. `0` and `0.5` are numbers; `1_000`, `nan`, `inf` are not. Rows with more cells than the header are skipped; missing cells become null.
 - JSON / JSONL are read as UTF-8 (a BOM is allowed). A JSON array item that is not an object is skipped with a warning.
 
 ### 5.2 Change Detection (`builder.py`)
@@ -188,7 +188,7 @@ Assign exactly one role per field. Apply the first matching rule from the top.
 | `text` | Any other string |
 
 - Fields are analyzed in first-seen order across all records. A field missing from a record counts as null.
-- `id`: "contains `id`" means `id` is a word of the name (`id`, `product_id`, `order.id`, `userId`), not a substring (`paid`, `width`). At most one `id` field: the first field that qualifies.
+- `id`: "contains `id`" means `id`, `uuid` or `guid` is a word of the name (`id`, `product_id`, `order.id`, `userId`, `uuid`), not a substring (`paid`, `width`). Values must be int or non-empty strings (no float / bool). At most one `id` field: the first qualifying field whose name contains `id`; only if there is none, the first field if it qualifies.
 - Other roles ignore nulls. A field whose values are all null, or that mixes types (including bool), is `text`.
 - `date`: sample the first 100 non-null values. A value counts only if it starts with `YYYY-MM-DD` and parses with `date.fromisoformat` / `datetime.fromisoformat`.
 - If there is no `id` field, use the record index as `_obot_id`.
@@ -197,7 +197,7 @@ Assign exactly one role per field. Apply the first matching rule from the top.
   {"obot_schema_version": 1, "id_field": "product_id", "record_count": 120,
    "fields": [{"name": "product_id", "role": "id"}, {"name": "price.amount", "role": "number"}]}
   ```
-- If `use_llm: true`, send field names, roles, and 3 sample records to the LLM to refine roles. If the response is invalid JSON, refers to unknown fields or roles, has more than one `id`, or picks an `id` that is not unique and non-null, keep the rule-based result. (Phase 2 implements `refine_with_llm`; wiring it to a real provider is phase 4.)
+- If `use_llm: true`, send field names, roles, and 3 sample records to the LLM to refine roles. The reply is `{"roles": {"<field>": "<role>"}}`. If it is invalid JSON or not that shape, keep the rule-based result. Otherwise validate each entry and apply only the valid ones (log the rest): the field and role must exist, and the role must fit the data — `id` meets the id value rules above, `number` has only numeric values, `date` has only strings that pass the date rule, `category` has only strings (the unique-count limit is waived), `text` always fits. If more than one `id` is proposed, ignore all `id` proposals. When a new `id` is applied, the previous `id` field takes the role the reply gives it, or else is reclassified by the rules. (Phase 2 implements `refine_with_llm`; wiring it to a real provider is phase 4.)
 
 ### 5.4 Chunking (`chunker.py`)
 

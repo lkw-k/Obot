@@ -121,3 +121,21 @@ def test_csv_short_row_fills_none_and_long_row_is_skipped(tmp_path, caplog):
 def test_csv_header_required(tmp_path):
     with pytest.raises(LoadError, match="header"):
         load_file(_write(tmp_path / "a.csv", ""))
+
+
+def test_csv_leading_zero_column_stays_strings(tmp_path):
+    f = _write(tmp_path / "a.csv", "code,zip\n007,01234\n12,63000\n")
+    assert load_file(f) == [
+        {"code": "007", "zip": "01234"},
+        {"code": "12", "zip": "63000"},
+    ]
+
+
+def test_csv_zero_and_decimals_are_numbers(tmp_path):
+    f = _write(tmp_path / "a.csv", "v\n0\n0.5\n10\n")
+    assert load_file(f) == [{"v": 0}, {"v": 0.5}, {"v": 10}]
+
+
+def test_csv_column_with_any_text_stays_strings(tmp_path):
+    f = _write(tmp_path / "a.csv", "v,w\n1,\nN/A,2\n")
+    assert load_file(f) == [{"v": "1", "w": None}, {"v": "N/A", "w": 2}]

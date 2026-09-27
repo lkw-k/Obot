@@ -234,3 +234,72 @@ def test_refine_applies_valid_changes():
 def test_refine_keeps_rule_based_result_on_bad_reply(reply):
     schema, records = _base()
     assert refine_with_llm(schema, records, FakeLLM(reply)) == schema
+
+
+# --- id preference and value types -------------------------------------------
+
+
+def test_named_id_beats_unique_first_field():
+    records = [{"name": "a", "product_id": 1}, {"name": "b", "product_id": 2}]
+    roles = _roles(records)
+    assert analyze_schema(records).id_field == "product_id"
+    assert roles["name"] != "id"
+
+
+@pytest.mark.parametrize("name", ["uuid", "order_guid", "userUuid"])
+def test_uuid_and_guid_names_are_id(name):
+    records = [{"a": 1, name: "u1"}, {"a": 1, name: "u2"}]
+    assert analyze_schema(records).id_field == name
+
+
+def test_unique_float_first_field_is_not_id():
+    records = [{"price": 1.5, "v": "a"}, {"price": 2.5, "v": "a"}]
+    schema = analyze_schema(records)
+    assert schema.id_field == "_obot_id"
+    assert _roles(records)["price"] == "number"
+
+
+def test_blank_string_values_are_not_id():
+    assert analyze_schema([{"id": "a"}, {"id": " "}]).id_field == "_obot_id"
+
+
+# --- LLM refinement: per-entry validation -------------------------------------
+
+
+def test_refine_applies_valid_entries_and_drops_invalid_ones():
+    schema, records = _base()
+    reply = '{"roles": {"note": "text", "missing": "text", "code": "blob"}}'
+    refined = refine_with_llm(schema, records, FakeLLM(reply))
+    roles = {f.name: f.role for f in refined.fields}
+    assert roles["note"] == "text"
+    assert roles["code"] == {f.name: f.role for f in schema.fields}["code"]
+
+
+def test_refine_rejects_role_that_does_not_fit_data():
+    schema, records = _base()
+    reply = '{"roles": {"note": "number", "code": "date", "k": "text"}}'
+    refined = refine_with_llm(schema, records, FakeLLM(reply))
+    roles = {f.name: f.role for f in refined.fields}
+    before = {f.name: f.role for f in schema.fields}
+    assert roles["note"] == before["note"]
+    assert roles["code"] == before["code"]
+    assert roles["k"] == "text"
+
+
+def test_refine_new_id_reclassifies_previous_id():
+    records = [{"id": i, "sku": f"S{i}"} for i in range(4)]
+    schema = analyze_schema(records)
+    assert schema.id_field == "id"
+    refined = refine_with_llm(schema, records, FakeLLM('{"roles": {"sku": "id"}}'))
+    roles = {f.name: f.role for f in refined.fields}
+    assert refined.id_field == "sku"
+    assert roles["id"] == "number"
+
+
+def test_refine_two_id_proposals_ignores_only_ids():
+    schema, records = _base()
+    reply = '{"roles": {"code": "id", "note": "id", "k": "text"}}'
+    refined = refine_with_llm(schema, records, FakeLLM(reply))
+    roles = {f.name: f.role for f in refined.fields}
+    assert refined.id_field == "_obot_id"
+    assert roles["k"] == "text"

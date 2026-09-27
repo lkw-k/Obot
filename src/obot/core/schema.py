@@ -1,6 +1,7 @@
 """Field role analysis (spec §5.3)."""
 
 import json
+import logging
 import re
 from datetime import date, datetime
 from pathlib import Path
@@ -9,6 +10,8 @@ from typing import Any, Literal, get_args
 from pydantic import BaseModel
 
 from obot.llm.base import LLMClient
+
+logger = logging.getLogger(__name__)
 
 Role = Literal["id", "number", "date", "category", "text"]
 ROLES: tuple[str, ...] = get_args(Role)
@@ -21,6 +24,7 @@ CATEGORY_MIN_UNIQUE = 20
 CATEGORY_UNIQUE_RATIO = 0.05
 CATEGORY_MAX_AVG_LEN = 30
 LLM_SAMPLE_RECORDS = 3
+ID_TOKENS = frozenset({"id", "uuid", "guid"})
 
 
 class FieldInfo(BaseModel):
@@ -37,12 +41,12 @@ class Schema(BaseModel):
 
 def analyze_schema(records: list[dict[str, Any]]) -> Schema:
     """Assign one role per field; the first matching rule wins."""
-    names = _field_names(records)
-    roles: dict[str, Role] = {}
-    for position, name in enumerate(names):
-        values = [r.get(name) for r in records]
-        allow_id = "id" not in roles.values()
-        roles[name] = _classify(name, position, values, allow_id)
+    columns = _columns(records)
+    id_field = _pick_id_field(columns)
+    roles: dict[str, Role] = {
+        name: "id" if name == id_field else _classify(values)
+        for name, values in columns.items()
+    }
     return _build(roles, len(records))
 
 
@@ -68,7 +72,7 @@ _REFINE_SYSTEM = (
 def refine_with_llm(
     schema: Schema, records: list[dict[str, Any]], llm: LLMClient
 ) -> Schema:
-    """Ask the LLM to correct roles; keep the rule-based schema on any bad reply."""
+    """Ask the LLM to correct roles; apply only entries that fit the data."""
     payload = {
         "fields": [f.model_dump() for f in schema.fields],
         "samples": records[:LLM_SAMPLE_RECORDS],
@@ -80,22 +84,36 @@ def refine_with_llm(
     )
     try:
         changes = json.loads(reply)["roles"]
-    except (json.JSONDecodeError, TypeError, KeyError):
+    except (ValueError, TypeError, KeyError):
+        logger.warning("schema refinement: unreadable LLM reply, ignored")
         return schema
     if not isinstance(changes, dict):
+        logger.warning("schema refinement: unreadable LLM reply, ignored")
         return schema
 
+    columns = _columns(records)
     roles: dict[str, Role] = {f.name: f.role for f in schema.fields}
+    many_ids = sum(role == "id" for role in changes.values()) > 1
+    applied: set[str] = set()
     for name, role in changes.items():
         if name not in roles or role not in ROLES:
-            return schema
-        roles[name] = role
+            reason = "unknown field or role"
+        elif role == "id" and many_ids:
+            reason = "more than one id proposed"
+        elif not _fits(role, columns[name]):
+            reason = "does not fit the data"
+        else:
+            roles[name] = role
+            applied.add(name)
+            continue
+        logger.warning("schema refinement: %s=%s ignored (%s)", name, role, reason)
 
-    id_fields = [n for n, r in roles.items() if r == "id"]
-    if len(id_fields) > 1:
-        return schema
-    if id_fields and not _unique_non_null([r.get(id_fields[0]) for r in records]):
-        return schema
+    # A newly applied id replaces the old one; the old one gets rule roles back.
+    ids = [n for n, r in roles.items() if r == "id"]
+    if len(ids) > 1:
+        for name in ids:
+            if name not in applied:
+                roles[name] = _classify(columns[name])
     return _build(roles, schema.record_count)
 
 
@@ -108,23 +126,32 @@ def _build(roles: dict[str, Role], record_count: int) -> Schema:
     )
 
 
-def _field_names(records: list[dict[str, Any]]) -> list[str]:
-    """Field names in first-seen order across all records."""
-    seen: dict[str, None] = {}
+def _columns(records: list[dict[str, Any]]) -> dict[str, list[Any]]:
+    """Values per field, fields in first-seen order; missing values are None."""
+    names: dict[str, None] = {}
     for record in records:
         for key in record:
-            seen.setdefault(key, None)
-    return list(seen)
+            names.setdefault(key, None)
+    return {name: [r.get(name) for r in records] for name in names}
 
 
-def _classify(name: str, position: int, values: list[Any], allow_id: bool) -> Role:
-    if allow_id and (position == 0 or _has_id_token(name)) and _unique_non_null(values):
-        return "id"
+def _pick_id_field(columns: dict[str, list[Any]]) -> str | None:
+    """First id-named field that qualifies, else the first field if it qualifies."""
+    for name, values in columns.items():
+        if _has_id_token(name) and _is_id_column(values):
+            return name
+    first = next(iter(columns), None)
+    if first is not None and _is_id_column(columns[first]):
+        return first
+    return None
 
+
+def _classify(values: list[Any]) -> Role:
+    """Role for a field that is not the id field."""
     present = [v for v in values if v is not None]
     if not present:
         return "text"
-    if all(isinstance(v, int | float) and not isinstance(v, bool) for v in present):
+    if _all_numbers(present):
         return "number"
     if not all(isinstance(v, str) for v in present):
         return "text"
@@ -135,19 +162,41 @@ def _classify(name: str, position: int, values: list[Any], allow_id: bool) -> Ro
     return "text"
 
 
+def _fits(role: Role, values: list[Any]) -> bool:
+    """Whether the data allows this role (used to check LLM suggestions)."""
+    present = [v for v in values if v is not None]
+    strings = all(isinstance(v, str) for v in present)
+    if role == "id":
+        return _is_id_column(values)
+    if role == "number":
+        return bool(present) and _all_numbers(present)
+    if role == "date":
+        return bool(present) and strings and _is_date_column(present)
+    if role == "category":
+        return strings
+    return True
+
+
 def _has_id_token(name: str) -> bool:
-    """'id' as a word: id, product_id, order.id, productId — not 'paid' or 'width'."""
+    """id / uuid / guid as a word: product_id, order.id, productId — not 'paid'."""
     spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
-    return "id" in re.split(r"[^a-z0-9]+", spaced.lower())
+    return not ID_TOKENS.isdisjoint(re.split(r"[^a-z0-9]+", spaced.lower()))
 
 
-def _unique_non_null(values: list[Any]) -> bool:
-    if not values or any(v is None for v in values):
+def _is_id_column(values: list[Any]) -> bool:
+    """Unique, non-null, and every value an int or a non-empty string."""
+    if not values:
         return False
-    try:
-        return len(set(values)) == len(values)
-    except TypeError:
-        return False
+    for v in values:
+        if isinstance(v, bool) or not isinstance(v, int | str):
+            return False
+        if isinstance(v, str) and not v.strip():
+            return False
+    return len(set(values)) == len(values)
+
+
+def _all_numbers(values: list[Any]) -> bool:
+    return all(isinstance(v, int | float) and not isinstance(v, bool) for v in values)
 
 
 def _is_date_column(values: list[str]) -> bool:

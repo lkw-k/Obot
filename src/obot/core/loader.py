@@ -18,6 +18,7 @@ CSV_ENCODINGS = ("utf-8-sig", "cp949")
 # "1_000", "nan" and "inf", which are not numbers in a CSV cell.
 _INT_RE = re.compile(r"[+-]?\d+")
 _FLOAT_RE = re.compile(r"[+-]?(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?")
+_LEADING_ZERO_RE = re.compile(r"[+-]?0\d")
 
 
 class LoadError(Exception):
@@ -120,22 +121,36 @@ def _read_csv(path: Path) -> list[Record]:
     if not header or not any(h.strip() for h in header):
         raise LoadError(f"{path}: CSV header is required")
 
-    records = []
+    rows = []
     for row in reader:
         if None in row:  # more cells than header columns
             logger.warning("%s:%d: too many columns, skipped", path, reader.line_num)
             continue
-        records.append({k: _convert_cell(v) for k, v in row.items()})
-    return records
+        rows.append(row)
+
+    numeric = {name for name in header if _is_numeric_column([r[name] for r in rows])}
+    return [{k: _convert_cell(v, k in numeric) for k, v in row.items()} for row in rows]
 
 
-def _convert_cell(value: str | None) -> Any:
-    """'' / missing → None, then int → float → original string."""
+def _is_numeric_column(values: list[str | None]) -> bool:
+    """Every non-empty cell is a plain number and none has a leading zero.
+
+    Deciding per column keeps one type per column and keeps codes such as
+    "007" or zip code "01234" as strings.
+    """
+    cells = [v.strip() for v in values if v]
+    return bool(cells) and all(
+        (_INT_RE.fullmatch(c) or _FLOAT_RE.fullmatch(c))
+        and not _LEADING_ZERO_RE.match(c)
+        for c in cells
+    )
+
+
+def _convert_cell(value: str | None, numeric: bool) -> Any:
+    """'' / missing → None; numeric columns → int, else float."""
     if value is None or value == "":
         return None
+    if not numeric:
+        return value
     text = value.strip()
-    if _INT_RE.fullmatch(text):
-        return int(text)
-    if _FLOAT_RE.fullmatch(text):
-        return float(text)
-    return value
+    return int(text) if _INT_RE.fullmatch(text) else float(text)

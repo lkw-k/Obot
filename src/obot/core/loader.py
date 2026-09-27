@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import logging
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -53,11 +54,15 @@ def flatten(obj: dict[str, Any], prefix: str = "") -> Record:
     for key, value in obj.items():
         name = f"{prefix}{key}"
         if isinstance(value, dict):
-            out.update(flatten(value, f"{name}."))
+            nested = flatten(value, f"{name}.")
         elif isinstance(value, list):
-            out[name] = json.dumps(value, ensure_ascii=False)
+            nested = {name: json.dumps(value, ensure_ascii=False)}
         else:
-            out[name] = value
+            nested = {name: value}
+        for flat_key, flat_value in nested.items():
+            if flat_key in out:
+                logger.warning("key '%s' appears twice, last value kept", flat_key)
+            out[flat_key] = flat_value
     return out
 
 
@@ -99,9 +104,14 @@ def _read_jsonl(path: Path) -> list[Any]:
         if not line.strip():
             continue
         try:
-            items.append(json.loads(line))
+            item = json.loads(line)
         except json.JSONDecodeError as e:
             logger.warning("%s:%d: invalid JSON, skipped: %s", path, lineno, e)
+            continue
+        if isinstance(item, dict):
+            items.append(item)
+        else:
+            logger.warning("%s:%d: not an object, skipped", path, lineno)
     return items
 
 
@@ -120,6 +130,11 @@ def _read_csv(path: Path) -> list[Record]:
     header = reader.fieldnames
     if not header or not any(h.strip() for h in header):
         raise LoadError(f"{path}: CSV header is required")
+    duplicates = sorted({h for h in header if header.count(h) > 1})
+    if duplicates:
+        logger.warning(
+            "%s: duplicate header %s, last column kept", path, ", ".join(duplicates)
+        )
 
     rows = []
     for row in reader:
@@ -136,12 +151,14 @@ def _is_numeric_column(values: list[str | None]) -> bool:
     """Every non-empty cell is a plain number and none has a leading zero.
 
     Deciding per column keeps one type per column and keeps codes such as
-    "007" or zip code "01234" as strings.
+    "007" or zip code "01234" as strings. Overflowing values ("1e400") are
+    not numbers.
     """
     cells = [v.strip() for v in values if v]
     return bool(cells) and all(
         (_INT_RE.fullmatch(c) or _FLOAT_RE.fullmatch(c))
         and not _LEADING_ZERO_RE.match(c)
+        and math.isfinite(float(c))
         for c in cells
     )
 

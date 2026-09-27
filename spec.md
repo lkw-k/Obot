@@ -155,8 +155,9 @@ load → change detection → schema analysis → chunking → embedding → sto
 - Flatten nested objects with dot notation (`{"a": {"b": 1}}` → `{"a.b": 1}`).
 - Store list values as JSON strings.
 - Skip records that fail to parse and log a warning. If all records fail, the build fails.
-- CSV numbers are decided per column: a column is converted (int where possible, else float) only if every non-empty cell is a plain decimal literal (`42`, `-7`, `3.5`, `1e3`) with no leading zero. Otherwise the whole column stays strings, so codes like `007` or zip code `01234` keep their zeros and a column never mixes numbers and strings. `0` and `0.5` are numbers; `1_000`, `nan`, `inf` are not. Rows with more cells than the header are skipped; missing cells become null.
-- JSON / JSONL are read as UTF-8 (a BOM is allowed). A JSON array item that is not an object is skipped with a warning.
+- CSV numbers are decided per column: a column is converted (int where possible, else float) only if every non-empty cell is a plain decimal literal (`42`, `-7`, `3.5`, `1e3`) with no leading zero. Otherwise the whole column stays strings, so codes like `007` or zip code `01234` keep their zeros and a column never mixes numbers and strings. `0` and `0.5` are numbers; `1_000`, `nan`, `inf` and overflowing values like `1e400` are not. Rows with more cells than the header are skipped; missing cells become null.
+- JSON / JSONL are read as UTF-8 (a BOM is allowed). A JSON array item or JSONL line that is not an object is skipped with a warning.
+- Key collisions (`{"a.b": 1, "a": {"b": 2}}` after flattening, or a duplicate CSV header) keep the last value and log a warning.
 
 ### 5.2 Change Detection (`builder.py`)
 

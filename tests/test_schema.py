@@ -303,3 +303,21 @@ def test_refine_two_id_proposals_ignores_only_ids():
     roles = {f.name: f.role for f in refined.fields}
     assert refined.id_field == "_obot_id"
     assert roles["k"] == "text"
+
+
+def test_refine_previous_id_takes_role_from_reply():
+    records = [{"id": i, "sku": f"S{i}"} for i in range(4)]
+    schema = analyze_schema(records)
+    reply = '{"roles": {"sku": "id", "id": "text"}}'
+    refined = refine_with_llm(schema, records, FakeLLM(reply))
+    roles = {f.name: f.role for f in refined.fields}
+    assert refined.id_field == "sku"
+    assert roles["id"] == "text"
+
+
+def test_refine_demoting_id_without_new_id_falls_back():
+    records = [{"id": i, "v": "a"} for i in range(4)]
+    schema = analyze_schema(records)
+    refined = refine_with_llm(schema, records, FakeLLM('{"roles": {"id": "number"}}'))
+    assert refined.id_field == "_obot_id"
+    assert {f.name: f.role for f in refined.fields}["id"] == "number"

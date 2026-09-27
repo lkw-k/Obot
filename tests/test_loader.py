@@ -139,3 +139,34 @@ def test_csv_zero_and_decimals_are_numbers(tmp_path):
 def test_csv_column_with_any_text_stays_strings(tmp_path):
     f = _write(tmp_path / "a.csv", "v,w\n1,\nN/A,2\n")
     assert load_file(f) == [{"v": "1", "w": None}, {"v": "N/A", "w": 2}]
+
+
+def test_jsonl_non_object_line_logs_line_number(tmp_path, caplog):
+    f = _write(tmp_path / "a.jsonl", '{"id": 1}\n\n5\n[1]\n{"id": 2}\n')
+    with caplog.at_level(logging.WARNING):
+        assert load_file(f) == [{"id": 1}, {"id": 2}]
+    assert "a.jsonl:3: not an object" in caplog.text
+    assert "a.jsonl:4: not an object" in caplog.text
+
+
+def test_csv_overflowing_number_keeps_column_as_strings(tmp_path):
+    f = _write(tmp_path / "a.csv", "v\n1\n1e400\n")
+    assert load_file(f) == [{"v": "1"}, {"v": "1e400"}]
+
+
+def test_csv_numeric_cells_with_spaces(tmp_path):
+    f = _write(tmp_path / "a.csv", "v\n 42 \n7\n")
+    assert load_file(f) == [{"v": 42}, {"v": 7}]
+
+
+def test_flatten_key_collision_keeps_last_and_warns(caplog):
+    with caplog.at_level(logging.WARNING):
+        assert flatten({"a.b": 1, "a": {"b": 2}}) == {"a.b": 2}
+    assert "'a.b' appears twice" in caplog.text
+
+
+def test_csv_duplicate_header_warns(tmp_path, caplog):
+    f = _write(tmp_path / "a.csv", "a,a\n1,2\n")
+    with caplog.at_level(logging.WARNING):
+        assert load_file(f) == [{"a": 2}]
+    assert "duplicate header a" in caplog.text

@@ -155,6 +155,8 @@ load → change detection → schema analysis → chunking → embedding → sto
 - Flatten nested objects with dot notation (`{"a": {"b": 1}}` → `{"a.b": 1}`).
 - Store list values as JSON strings.
 - Skip records that fail to parse and log a warning. If all records fail, the build fails.
+- CSV numbers: only plain decimal literals convert (`42`, `-7`, `3.5`, `1e3`); `1_000`, `nan`, `inf` stay strings. Rows with more cells than the header are skipped; missing cells become null.
+- JSON / JSONL are read as UTF-8 (a BOM is allowed). A JSON array item that is not an object is skipped with a warning.
 
 ### 5.2 Change Detection (`builder.py`)
 
@@ -185,9 +187,17 @@ Assign exactly one role per field. Apply the first matching rule from the top.
 | `category` | String, unique values ≤ max(20, 5% of record count), average length ≤ 30 |
 | `text` | Any other string |
 
+- Fields are analyzed in first-seen order across all records. A field missing from a record counts as null.
+- `id`: "contains `id`" means `id` is a word of the name (`id`, `product_id`, `order.id`, `userId`), not a substring (`paid`, `width`). At most one `id` field: the first field that qualifies.
+- Other roles ignore nulls. A field whose values are all null, or that mixes types (including bool), is `text`.
+- `date`: sample the first 100 non-null values. A value counts only if it starts with `YYYY-MM-DD` and parses with `date.fromisoformat` / `datetime.fromisoformat`.
 - If there is no `id` field, use the record index as `_obot_id`.
-- Save the result to `storage/{bot}/schema.json`.
-- If `use_llm: true`, send field names, roles, and 3 sample records to the LLM to refine roles. If the response is invalid JSON, keep the rule-based result.
+- Save the result to `storage/{bot}/schema.json`:
+  ```json
+  {"obot_schema_version": 1, "id_field": "product_id", "record_count": 120,
+   "fields": [{"name": "product_id", "role": "id"}, {"name": "price.amount", "role": "number"}]}
+  ```
+- If `use_llm: true`, send field names, roles, and 3 sample records to the LLM to refine roles. If the response is invalid JSON, refers to unknown fields or roles, has more than one `id`, or picks an `id` that is not unique and non-null, keep the rule-based result. (Phase 2 implements `refine_with_llm`; wiring it to a real provider is phase 4.)
 
 ### 5.4 Chunking (`chunker.py`)
 
@@ -374,7 +384,7 @@ obot ask NAME "question"      # ask from the terminal without the server
 
 Each phase must meet its completion criteria before moving on. One phase = one branch = one PR (see Section 11).
 
-- [ ] **1. Project setup** `feat/setup`: uv project, folder structure, config loading, GitHub Actions (ruff + pytest), `scripts/verify.sh`
+- [x] **1. Project setup** `feat/setup`: uv project, folder structure, config loading, GitHub Actions (ruff + pytest), `scripts/verify.sh`
   - Done when: settings object is created from `config.example.yaml`, missing key raises an error, CI runs on PRs
 - [ ] **2. Loading + schema analysis** `feat/loader`
   - Done when: `schema.json` is generated from the sample files in `examples/`, tests pass

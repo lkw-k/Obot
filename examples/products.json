@@ -1,0 +1,436 @@
+{
+  "products": [
+    {
+      "product_id": "P-1001",
+      "name": "하늘전자 무선 마우스 A01",
+      "category": "마우스",
+      "brand": "오비랩",
+      "price": {
+        "amount": 221000,
+        "currency": "KRW"
+      },
+      "stock": 9,
+      "rating": 4.6,
+      "tags": [
+        "신제품",
+        "할인"
+      ],
+      "description": "마우스 제품군의 하늘전자 무선 마우스 A01입니다. 사무용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-01-03"
+    },
+    {
+      "product_id": "P-1002",
+      "name": "바른기기 초경량 모니터 B02",
+      "category": "모니터",
+      "brand": "누리텍",
+      "price": {
+        "amount": 54000,
+        "currency": "KRW"
+      },
+      "stock": 11,
+      "rating": 4.1,
+      "tags": [
+        "신제품",
+        "추천"
+      ],
+      "description": "모니터 제품군의 바른기기 초경량 모니터 B02입니다. 게임용으로 설계되었고 조용한 타건감이 특징입니다.",
+      "released_at": "2025-10-19"
+    },
+    {
+      "product_id": "P-1003",
+      "name": "바른기기 무소음 헤드셋 C03",
+      "category": "헤드셋",
+      "brand": "오비랩",
+      "price": {
+        "amount": 132000,
+        "currency": "KRW"
+      },
+      "stock": 71,
+      "rating": 4.7,
+      "tags": [
+        "할인",
+        "한정판"
+      ],
+      "description": "헤드셋 제품군의 바른기기 무소음 헤드셋 C03입니다. 게임용으로 설계되었고 조용한 타건감이 특징입니다.",
+      "released_at": "2025-10-10"
+    },
+    {
+      "product_id": "P-1004",
+      "name": "누리텍 무소음 노트북 거치대 D04",
+      "category": "노트북 거치대",
+      "brand": "누리텍",
+      "price": {
+        "amount": 316000,
+        "currency": "KRW"
+      },
+      "stock": 47,
+      "rating": 3.2,
+      "tags": [
+        "신제품",
+        "추천"
+      ],
+      "description": "노트북 거치대 제품군의 누리텍 무소음 노트북 거치대 D04입니다. 게임용으로 설계되었고 가벼운 무게이 특징입니다.",
+      "released_at": "2025-11-18"
+    },
+    {
+      "product_id": "P-1005",
+      "name": "바른기기 프로 키보드 E05",
+      "category": "키보드",
+      "brand": "바른기기",
+      "price": {
+        "amount": 179000,
+        "currency": "KRW"
+      },
+      "stock": 74,
+      "rating": 4.8,
+      "tags": [
+        "할인",
+        "추천"
+      ],
+      "description": "키보드 제품군의 바른기기 프로 키보드 E05입니다. 게임용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-12-25"
+    },
+    {
+      "product_id": "P-1006",
+      "name": "누리텍 무소음 마우스 F06",
+      "category": "마우스",
+      "brand": "하늘전자",
+      "price": {
+        "amount": 313000,
+        "currency": "KRW"
+      },
+      "stock": 67,
+      "rating": 4.0,
+      "tags": [
+        "할인",
+        "한정판"
+      ],
+      "description": "마우스 제품군의 누리텍 무소음 마우스 F06입니다. 재택근무용으로 설계되었고 조용한 타건감이 특징입니다.",
+      "released_at": "2025-02-17"
+    },
+    {
+      "product_id": "P-1007",
+      "name": "바른기기 무선 모니터 G07",
+      "category": "모니터",
+      "brand": "누리텍",
+      "price": {
+        "amount": 194000,
+        "currency": "KRW"
+      },
+      "stock": 119,
+      "rating": 4.0,
+      "tags": [
+        "신제품",
+        "추천"
+      ],
+      "description": "모니터 제품군의 바른기기 무선 모니터 G07입니다. 재택근무용으로 설계되었고 선명한 화면이 특징입니다.",
+      "released_at": "2025-12-12"
+    },
+    {
+      "product_id": "P-1008",
+      "name": "바른기기 인체공학 헤드셋 H08",
+      "category": "헤드셋",
+      "brand": "오비랩",
+      "price": {
+        "amount": 252000,
+        "currency": "KRW"
+      },
+      "stock": 107,
+      "rating": 3.2,
+      "tags": [
+        "할인",
+        "한정판"
+      ],
+      "description": "헤드셋 제품군의 바른기기 인체공학 헤드셋 H08입니다. 사무용으로 설계되었고 조용한 타건감이 특징입니다.",
+      "released_at": "2025-12-23"
+    },
+    {
+      "product_id": "P-1009",
+      "name": "하늘전자 슬림 노트북 거치대 I09",
+      "category": "노트북 거치대",
+      "brand": "바른기기",
+      "price": {
+        "amount": 314000,
+        "currency": "KRW"
+      },
+      "stock": 36,
+      "rating": 4.4,
+      "tags": [
+        "할인",
+        "신제품"
+      ],
+      "description": "노트북 거치대 제품군의 하늘전자 슬림 노트북 거치대 I09입니다. 휴대용으로 설계되었고 선명한 화면이 특징입니다.",
+      "released_at": "2025-03-20"
+    },
+    {
+      "product_id": "P-1010",
+      "name": "오비랩 초경량 키보드 J10",
+      "category": "키보드",
+      "brand": "누리텍",
+      "price": {
+        "amount": 49000,
+        "currency": "KRW"
+      },
+      "stock": 98,
+      "rating": 3.6,
+      "tags": [
+        "베스트",
+        "한정판"
+      ],
+      "description": "키보드 제품군의 오비랩 초경량 키보드 J10입니다. 휴대용으로 설계되었고 가벼운 무게이 특징입니다.",
+      "released_at": "2025-02-06"
+    },
+    {
+      "product_id": "P-1011",
+      "name": "바른기기 초경량 마우스 K11",
+      "category": "마우스",
+      "brand": "하늘전자",
+      "price": {
+        "amount": 300000,
+        "currency": "KRW"
+      },
+      "stock": 113,
+      "rating": 3.3,
+      "tags": [
+        "한정판",
+        "할인"
+      ],
+      "description": "마우스 제품군의 바른기기 초경량 마우스 K11입니다. 휴대용으로 설계되었고 선명한 화면이 특징입니다.",
+      "released_at": "2025-11-13"
+    },
+    {
+      "product_id": "P-1012",
+      "name": "누리텍 무선 모니터 L12",
+      "category": "모니터",
+      "brand": "누리텍",
+      "price": {
+        "amount": 61000,
+        "currency": "KRW"
+      },
+      "stock": 19,
+      "rating": 3.5,
+      "tags": [
+        "베스트",
+        "신제품"
+      ],
+      "description": "모니터 제품군의 누리텍 무선 모니터 L12입니다. 휴대용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-05-10"
+    },
+    {
+      "product_id": "P-1013",
+      "name": "오비랩 무선 헤드셋 M13",
+      "category": "헤드셋",
+      "brand": "하늘전자",
+      "price": {
+        "amount": 233000,
+        "currency": "KRW"
+      },
+      "stock": 78,
+      "rating": 4.1,
+      "tags": [
+        "베스트",
+        "신제품"
+      ],
+      "description": "헤드셋 제품군의 오비랩 무선 헤드셋 M13입니다. 휴대용으로 설계되었고 가벼운 무게이 특징입니다.",
+      "released_at": "2025-07-13"
+    },
+    {
+      "product_id": "P-1014",
+      "name": "바른기기 무소음 노트북 거치대 N14",
+      "category": "노트북 거치대",
+      "brand": "바른기기",
+      "price": {
+        "amount": 265000,
+        "currency": "KRW"
+      },
+      "stock": 7,
+      "rating": 3.4,
+      "tags": [
+        "베스트",
+        "한정판"
+      ],
+      "description": "노트북 거치대 제품군의 바른기기 무소음 노트북 거치대 N14입니다. 게임용으로 설계되었고 조용한 타건감이 특징입니다.",
+      "released_at": "2025-06-20"
+    },
+    {
+      "product_id": "P-1015",
+      "name": "오비랩 무소음 키보드 O15",
+      "category": "키보드",
+      "brand": "누리텍",
+      "price": {
+        "amount": 19000,
+        "currency": "KRW"
+      },
+      "stock": 68,
+      "rating": 3.2,
+      "tags": [
+        "할인",
+        "신제품"
+      ],
+      "description": "키보드 제품군의 오비랩 무소음 키보드 O15입니다. 사무용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-10-13"
+    },
+    {
+      "product_id": "P-1016",
+      "name": "누리텍 슬림 마우스 P16",
+      "category": "마우스",
+      "brand": "하늘전자",
+      "price": {
+        "amount": 148000,
+        "currency": "KRW"
+      },
+      "stock": 77,
+      "rating": 3.7,
+      "tags": [
+        "신제품",
+        "추천"
+      ],
+      "description": "마우스 제품군의 누리텍 슬림 마우스 P16입니다. 휴대용으로 설계되었고 가벼운 무게이 특징입니다.",
+      "released_at": "2025-08-16"
+    },
+    {
+      "product_id": "P-1017",
+      "name": "하늘전자 무소음 모니터 Q17",
+      "category": "모니터",
+      "brand": "오비랩",
+      "price": {
+        "amount": 92000,
+        "currency": "KRW"
+      },
+      "stock": 95,
+      "rating": 3.7,
+      "tags": [
+        "할인",
+        "한정판"
+      ],
+      "description": "모니터 제품군의 하늘전자 무소음 모니터 Q17입니다. 게임용으로 설계되었고 조용한 타건감이 특징입니다.",
+      "released_at": "2025-04-17"
+    },
+    {
+      "product_id": "P-1018",
+      "name": "하늘전자 무선 헤드셋 R18",
+      "category": "헤드셋",
+      "brand": "오비랩",
+      "price": {
+        "amount": 372000,
+        "currency": "KRW"
+      },
+      "stock": 97,
+      "rating": 4.1,
+      "tags": [
+        "신제품",
+        "할인"
+      ],
+      "description": "헤드셋 제품군의 하늘전자 무선 헤드셋 R18입니다. 재택근무용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-06-25"
+    },
+    {
+      "product_id": "P-1019",
+      "name": "누리텍 인체공학 노트북 거치대 S19",
+      "category": "노트북 거치대",
+      "brand": "하늘전자",
+      "price": {
+        "amount": 296000,
+        "currency": "KRW"
+      },
+      "stock": 81,
+      "rating": 3.4,
+      "tags": [
+        "베스트",
+        "추천"
+      ],
+      "description": "노트북 거치대 제품군의 누리텍 인체공학 노트북 거치대 S19입니다. 휴대용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-04-17"
+    },
+    {
+      "product_id": "P-1020",
+      "name": "바른기기 게이밍 키보드 T20",
+      "category": "키보드",
+      "brand": "오비랩",
+      "price": {
+        "amount": 393000,
+        "currency": "KRW"
+      },
+      "stock": 3,
+      "rating": 4.6,
+      "tags": [
+        "한정판",
+        "할인"
+      ],
+      "description": "키보드 제품군의 바른기기 게이밍 키보드 T20입니다. 게임용으로 설계되었고 선명한 화면이 특징입니다.",
+      "released_at": "2025-08-26"
+    },
+    {
+      "product_id": "P-1021",
+      "name": "하늘전자 게이밍 마우스 U21",
+      "category": "마우스",
+      "brand": "누리텍",
+      "price": {
+        "amount": 60000,
+        "currency": "KRW"
+      },
+      "stock": 13,
+      "rating": 3.5,
+      "tags": [
+        "베스트",
+        "할인"
+      ],
+      "description": "마우스 제품군의 하늘전자 게이밍 마우스 U21입니다. 게임용으로 설계되었고 가벼운 무게이 특징입니다.",
+      "released_at": "2025-10-20"
+    },
+    {
+      "product_id": "P-1022",
+      "name": "오비랩 초경량 모니터 V22",
+      "category": "모니터",
+      "brand": "하늘전자",
+      "price": {
+        "amount": 353000,
+        "currency": "KRW"
+      },
+      "stock": 102,
+      "rating": 4.3,
+      "tags": [
+        "신제품",
+        "한정판"
+      ],
+      "description": "모니터 제품군의 오비랩 초경량 모니터 V22입니다. 게임용으로 설계되었고 가벼운 무게이 특징입니다.",
+      "released_at": "2025-03-14"
+    },
+    {
+      "product_id": "P-1023",
+      "name": "하늘전자 무소음 헤드셋 W23",
+      "category": "헤드셋",
+      "brand": "바른기기",
+      "price": {
+        "amount": 388000,
+        "currency": "KRW"
+      },
+      "stock": 59,
+      "rating": 3.8,
+      "tags": [
+        "신제품",
+        "베스트"
+      ],
+      "description": "헤드셋 제품군의 하늘전자 무소음 헤드셋 W23입니다. 게임용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-01-05"
+    },
+    {
+      "product_id": "P-1024",
+      "name": "바른기기 프로 노트북 거치대 X24",
+      "category": "노트북 거치대",
+      "brand": "누리텍",
+      "price": {
+        "amount": 354000,
+        "currency": "KRW"
+      },
+      "stock": 78,
+      "rating": 4.7,
+      "tags": [
+        "한정판",
+        "할인"
+      ],
+      "description": "노트북 거치대 제품군의 바른기기 프로 노트북 거치대 X24입니다. 게임용으로 설계되었고 긴 배터리 수명이 특징입니다.",
+      "released_at": "2025-01-01"
+    }
+  ]
+}

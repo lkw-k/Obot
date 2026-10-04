@@ -37,6 +37,8 @@ class Schema(BaseModel):
     id_field: str
     record_count: int
     fields: list[FieldInfo]
+    # field name -> SQLite column name; filled by the build (store.column_names)
+    columns: dict[str, str] = {}
 
 
 def analyze_schema(records: list[dict[str, Any]]) -> Schema:

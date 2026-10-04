@@ -174,7 +174,10 @@ Store the following in `storage/{bot}/manifest.json`:
 }
 ```
 
-Skip the build if file hashes, embedding model, schema version, and the build config hash (`schema_analysis`, the bot's `files`) are all unchanged.
+Skip the build if file hashes, embedding model, schema version, and the build config hash (`schema_analysis`, the bot's `files`) are all unchanged and the bot's Qdrant collection exists.
+
+- Delete the manifest when a build starts and write it last, only after the build succeeds, so a failed or interrupted build is never skipped next time.
+- A bot with several files is built from their records concatenated in file order.
 
 ### 5.3 Schema Analysis (`schema.py`)
 
@@ -196,7 +199,8 @@ Assign exactly one role per field. Apply the first matching rule from the top.
 - Save the result to `storage/{bot}/schema.json`:
   ```json
   {"obot_schema_version": 1, "id_field": "product_id", "record_count": 120,
-   "fields": [{"name": "product_id", "role": "id"}, {"name": "price.amount", "role": "number"}]}
+   "fields": [{"name": "product_id", "role": "id"}, {"name": "price.amount", "role": "number"}],
+   "columns": {"product_id": "product_id", "price.amount": "price_amount"}}
   ```
 - If `use_llm: true`, send field names, roles, and 3 sample records to the LLM to refine roles. The reply is `{"roles": {"<field>": "<role>"}}`. If it is invalid JSON or not that shape, keep the rule-based result. Otherwise validate each entry and apply only the valid ones (log the rest): the field and role must exist, and the role must fit the data — `id` meets the id value rules above, `number` has only numeric values, `date` has only strings that pass the date rule, `category` has only strings (the unique-count limit is waived), `text` always fits. If more than one `id` is proposed, ignore all `id` proposals. When a new `id` is applied, the previous `id` field takes the role the reply gives it, or else is reclassified by the rules. (Phase 2 implements `refine_with_llm`; wiring it to a real provider is phase 4.)
 
@@ -227,9 +231,9 @@ model.encode(texts, return_dense=True, return_sparse=True, max_length=2048)
 
 - Qdrant point id = `uuid5(NAMESPACE_URL, f"{bot}:{record_id}")`; keep the original id in the payload.
 - Store the full original record in the payload.
-- Normalize SQLite column names to letters, digits, and `_`; save the mapping to original field names in `schema.json`.
+- Normalize SQLite column names to letters, digits, and `_` (Unicode letters such as Korean are kept; other characters → `_`; a leading digit gets a `_` prefix; collisions get `_2`, `_3`, ...); save the mapping from original field names in `schema.json` (`columns`). When the id is `_obot_id`, it is also a column.
 - SQLite column types follow roles: `number` → REAL (INTEGER if all integers), everything else → TEXT. Values that fail conversion become null.
-- On rebuild, set the bot status to `building` first, then drop and recreate the collection and table.
+- On rebuild, set the bot status to `building` first, then empty the collection (delete all points; create it if missing) and drop and recreate the table. The collection is not dropped: in Qdrant local mode on Windows a deleted collection's files stay open, so a recreated collection reloads the old points (verified).
 
 **Qdrant local mode constraints (verified)**
 - Only one process can open a storage folder. A second client raises `RuntimeError`.
@@ -387,7 +391,7 @@ Each phase must meet its completion criteria before moving on. One phase = one b
 
 - [x] **1. Project setup** `feat/setup`: uv project, folder structure, config loading, GitHub Actions (ruff + pytest), `scripts/verify.sh`
   - Done when: settings object is created from `config.example.yaml`, missing key raises an error, CI runs on PRs
-- [ ] **2. Loading + schema analysis** `feat/loader`
+- [x] **2. Loading + schema analysis** `feat/loader`
   - Done when: `schema.json` is generated from the sample files in `examples/`, tests pass
 - [ ] **3. Chunking + embedding + storage** `feat/embedding`
   - Done when: after building the samples, Qdrant point count = SQLite row count = record count; rerunning skips the build

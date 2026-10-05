@@ -64,6 +64,12 @@ def test_id_requires_unique_and_non_null():
         assert analyze_schema(records).id_field == "_obot_id"
 
 
+def test_id_int_and_string_forms_count_as_duplicates():
+    # 1 and "1" would map to the same Qdrant point id.
+    assert analyze_schema([{"id": 1}, {"id": "1"}]).id_field == "_obot_id"
+    assert analyze_schema([{"id": 1}, {"id": "2"}]).id_field == "id"
+
+
 def test_only_one_id_field():
     records = [{"id": 1, "sku_id": "a"}, {"id": 2, "sku_id": "b"}]
     roles = _roles(records)

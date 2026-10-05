@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from obot.config import BotConfig, Settings
-from obot.core.builder import build_all, build_bot
+from obot.core.builder import build_bot
 from obot.core.loader import LoadError, load_file
 from obot.core.schema import load_schema
 from obot.core.store import count_points, count_rows, open_qdrant
@@ -37,8 +37,10 @@ def bots(tmp_path):
     return result
 
 
-def _build_all(bots, qdrant, storage, embedder, settings=None):
-    return build_all(bots, settings or Settings(), lambda: embedder, qdrant, storage)
+def _build_all(bots, qdrant, storage, embedder, settings=None, get_embedder=None):
+    settings = settings or Settings()
+    get_embedder = get_embedder or (lambda: embedder)
+    return [build_bot(b, settings, get_embedder, qdrant, storage) for b in bots]
 
 
 def test_samples_counts_match(bots, qdrant, storage, fake_embedder):
@@ -69,7 +71,7 @@ def test_rerun_skips_without_loading_model(bots, qdrant, storage, fake_embedder)
     def no_model():
         raise AssertionError("embedder must not be loaded when skipping")
 
-    results = build_all(bots, Settings(), no_model, qdrant, storage)
+    results = _build_all(bots, qdrant, storage, None, get_embedder=no_model)
     assert all(r.skipped for r in results)
     assert [r.record_count for r in results] == [24, 30, 28]
 
@@ -116,3 +118,27 @@ def test_multiple_files_are_concatenated(tmp_path, qdrant, storage, fake_embedde
     result = build_bot(bot, Settings(), lambda: fake_embedder, qdrant, storage)
     assert result.record_count == 3
     assert count_points(qdrant, "both") == 3
+
+
+def test_missing_file_fails_with_load_error(tmp_path, qdrant, storage, fake_embedder):
+    bot = BotConfig(name="gone", files=[tmp_path / "nope.json"])
+    with pytest.raises(LoadError, match="file not found"):
+        build_bot(bot, Settings(), lambda: fake_embedder, qdrant, storage)
+
+
+def test_manifest_without_record_count_rebuilds(bots, qdrant, storage, fake_embedder):
+    _build_all(bots[:1], qdrant, storage, fake_embedder)
+    manifest_path = storage / "products" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    del manifest["record_count"]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = build_bot(bots[0], Settings(), lambda: fake_embedder, qdrant, storage)
+    assert not result.skipped
+
+
+def test_reserved_obot_id_field_fails(tmp_path, qdrant, storage, fake_embedder):
+    data = tmp_path / "dup.jsonl"
+    data.write_text('{"_obot_id": 1}\n{"_obot_id": 1}\n', encoding="utf-8")
+    bot = BotConfig(name="dup", files=[data])
+    with pytest.raises(LoadError, match="reserved"):
+        build_bot(bot, Settings(), lambda: fake_embedder, qdrant, storage)

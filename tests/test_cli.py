@@ -53,3 +53,21 @@ def test_locked_storage_fails_with_guidance(project):
         holder.close()
     assert result.exit_code == 1
     assert "obot serve" in result.output
+
+
+def test_earlier_results_print_before_a_later_failure(project):
+    (project / "data" / "zzz.json").write_text("not json", encoding="utf-8")
+    result = runner.invoke(cli.app, ["build"])
+    assert result.exit_code == 1
+    assert "orders: built, 28 records" in result.output
+    assert "error: " in result.output and "zzz.json" in result.output
+
+
+def test_missing_configured_file_fails_without_traceback(project):
+    (project / "config.yaml").write_text(
+        "bots:\n  - name: typo\n    files: [data/missing.csv]\n", encoding="utf-8"
+    )
+    result = runner.invoke(cli.app, ["build"])
+    assert result.exit_code == 1
+    assert "file not found" in result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)

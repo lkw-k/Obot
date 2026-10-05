@@ -176,6 +176,7 @@ Store the following in `storage/{bot}/manifest.json`:
 
 Skip the build if file hashes, embedding model, schema version, and the build config hash (`schema_analysis`, the bot's `files`) are all unchanged and the bot's Qdrant collection exists.
 
+- A configured file that does not exist fails the bot's build with a clear error.
 - Delete the manifest when a build starts and write it last, only after the build succeeds, so a failed or interrupted build is never skipped next time.
 - A bot with several files is built from their records concatenated in file order.
 
@@ -192,10 +193,10 @@ Assign exactly one role per field. Apply the first matching rule from the top.
 | `text` | Any other string |
 
 - Fields are analyzed in first-seen order across all records. A field missing from a record counts as null.
-- `id`: "contains `id`" means `id`, `uuid` or `guid` is a word of the name (`id`, `product_id`, `order.id`, `userId`, `uuid`), not a substring (`paid`, `width`). Values must be int or non-empty strings (no float / bool). At most one `id` field: the first qualifying field whose name contains `id`; only if there is none, the first field if it qualifies.
+- `id`: "contains `id`" means `id`, `uuid` or `guid` is a word of the name (`id`, `product_id`, `order.id`, `userId`, `uuid`), not a substring (`paid`, `width`). Values must be int or non-empty strings (no float / bool) and unique when compared as strings (`1` and `"1"` are duplicates, since the Qdrant point id is built from the string form). At most one `id` field: the first qualifying field whose name contains `id`; only if there is none, the first field if it qualifies.
 - Other roles ignore nulls. A field whose values are all null, or that mixes types (including bool), is `text`.
 - `date`: sample the first 100 non-null values. A value counts only if it starts with `YYYY-MM-DD` and parses with `date.fromisoformat` / `datetime.fromisoformat`.
-- If there is no `id` field, use the record index as `_obot_id`.
+- If there is no `id` field, use the record index as `_obot_id`. If the data has its own `_obot_id` field that does not qualify as the id, the build fails (the name is reserved).
 - Save the result to `storage/{bot}/schema.json`:
   ```json
   {"obot_schema_version": 1, "id_field": "product_id", "record_count": 120,

@@ -194,7 +194,9 @@ def _is_id_column(values: list[Any]) -> bool:
             return False
         if isinstance(v, str) and not v.strip():
             return False
-    return len(set(values)) == len(values)
+    # Compared as strings: point ids are built from str(value), so 1 and "1"
+    # would collide.
+    return len({str(v) for v in values}) == len(values)
 
 
 def _all_numbers(values: list[Any]) -> bool:

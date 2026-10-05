@@ -15,7 +15,7 @@ from obot.config import BotConfig, Settings
 from obot.core import store
 from obot.core.chunker import chunk_text
 from obot.core.embedder import EMBEDDING_MODEL, Embedder
-from obot.core.loader import load_file
+from obot.core.loader import LoadError, load_file
 from obot.core.schema import (
     FALLBACK_ID_FIELD,
     SCHEMA_VERSION,
@@ -45,6 +45,9 @@ def build_bot(
     get_embedder is called only when a build is needed, so skipped runs do not
     load the model.
     """
+    for f in bot.files:
+        if not Path(f).is_file():
+            raise LoadError(f"{f}: file not found")
     bot_dir = Path(storage_dir) / bot.name
     manifest_path = bot_dir / "manifest.json"
     fingerprint = {
@@ -56,6 +59,7 @@ def build_bot(
     previous = _read_manifest(manifest_path)
     if (
         previous is not None
+        and "record_count" in previous
         and all(previous.get(k) == v for k, v in fingerprint.items())
         and qdrant.collection_exists(bot.name)
     ):
@@ -74,6 +78,12 @@ def build_bot(
         )
     schema = analyze_schema(records)
     if schema.id_field == FALLBACK_ID_FIELD:
+        if any(f.name == FALLBACK_ID_FIELD for f in schema.fields):
+            # The record index would silently replace the field's own values.
+            raise LoadError(
+                f"{bot.name}: field '{FALLBACK_ID_FIELD}' is reserved but does not "
+                "qualify as the id; rename it in the data"
+            )
         ids: list[Any] = list(range(len(records)))
         fields = [FALLBACK_ID_FIELD] + [f.name for f in schema.fields]
     else:
@@ -94,17 +104,6 @@ def build_bot(
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     logger.info("%s: built %d records", bot.name, len(records))
     return BuildResult(bot.name, False, len(records))
-
-
-def build_all(
-    bots: list[BotConfig],
-    settings: Settings,
-    get_embedder: Callable[[], Embedder],
-    qdrant: QdrantClient,
-    storage_dir: str | Path = "storage",
-) -> list[BuildResult]:
-    """Build bots one at a time, in order."""
-    return [build_bot(bot, settings, get_embedder, qdrant, storage_dir) for bot in bots]
 
 
 def _key(path: Path) -> str:

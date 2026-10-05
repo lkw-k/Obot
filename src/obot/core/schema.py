@@ -37,6 +37,8 @@ class Schema(BaseModel):
     id_field: str
     record_count: int
     fields: list[FieldInfo]
+    # field name -> SQLite column name; filled by the build (store.column_names)
+    columns: dict[str, str] = {}
 
 
 def analyze_schema(records: list[dict[str, Any]]) -> Schema:
@@ -192,7 +194,9 @@ def _is_id_column(values: list[Any]) -> bool:
             return False
         if isinstance(v, str) and not v.strip():
             return False
-    return len(set(values)) == len(values)
+    # Compared as strings: point ids are built from str(value), so 1 and "1"
+    # would collide.
+    return len({str(v) for v in values}) == len(values)
 
 
 def _all_numbers(values: list[Any]) -> bool:

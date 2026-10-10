@@ -30,4 +30,10 @@ def create_llm(config: LLMConfig, secrets: Secrets) -> LLMClient:
         from obot.llm.ollama import OllamaClient
 
         return OllamaClient(config)
-    raise LLMError(f"llm.provider '{config.provider}' is not supported yet")
+    if config.provider == "anthropic":
+        from obot.llm.anthropic import AnthropicClient
+
+        return AnthropicClient(config, secrets.anthropic_api_key)
+    from obot.llm.openai import OpenAIClient
+
+    return OpenAIClient(config, secrets.openai_api_key)

@@ -304,6 +304,7 @@ class LLMClient(Protocol):
 - The three providers implement only this interface.
 - With `json_mode=True`, instruct the model to output JSON only, strip Markdown code fences from the response, then parse.
 - Wrap network errors in `LLMError`.
+- `llm.temperature` is not sent to Anthropic: `messages.create` in the anthropic SDK (>= 1.13) has no `temperature` parameter.
 
 ---
 
@@ -394,7 +395,7 @@ Each phase must meet its completion criteria before moving on. One phase = one b
   - Done when: settings object is created from `config.example.yaml`, missing key raises an error, CI runs on PRs
 - [x] **2. Loading + schema analysis** `feat/loader`
   - Done when: `schema.json` is generated from the sample files in `examples/`, tests pass
-- [ ] **3. Chunking + embedding + storage** `feat/embedding`
+- [x] **3. Chunking + embedding + storage** `feat/embedding`
   - Done when: after building the samples, Qdrant point count = SQLite row count = record count; rerunning skips the build
 - [ ] **4. Search + answer (dense only)** `feat/retrieval`
   - Done when: `obot ask` returns an answer with sources

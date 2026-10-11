@@ -7,10 +7,12 @@ from typing import Annotated, NoReturn
 import typer
 
 from obot.config import ConfigError, load_settings, resolve_bots
+from obot.core.bot import Bot
 from obot.core.builder import build_bot
 from obot.core.embedder import get_embedder
 from obot.core.loader import LoadError
 from obot.core.store import StoreLockedError, open_qdrant
+from obot.llm.base import LLMError, create_llm
 
 STORAGE_DIR = Path("storage")
 
@@ -49,6 +51,34 @@ def build(
             qdrant.close()
     except (ConfigError, LoadError, StoreLockedError) as e:
         _fail(str(e))
+
+
+@app.command()
+def ask(
+    name: Annotated[str, typer.Argument(help="Bot name.")],
+    question: Annotated[str, typer.Argument(help="Question to ask.")],
+) -> None:
+    """Ask a bot from the terminal, building it first if needed."""
+    try:
+        settings = load_settings()
+        bot = next((b for b in resolve_bots(settings) if b.name == name), None)
+        if bot is None:
+            _fail(f"unknown bot '{name}'")
+        qdrant = open_qdrant(STORAGE_DIR / "qdrant")
+        try:
+            build_bot(bot, settings, get_embedder, qdrant, STORAGE_DIR)
+            llm = create_llm(settings.llm, settings.secrets)
+            result = Bot(
+                name, qdrant, get_embedder(), llm, settings.retrieval.top_k
+            ).ask(question)
+        finally:
+            qdrant.close()
+    except (ConfigError, LoadError, StoreLockedError, LLMError) as e:
+        _fail(str(e))
+    typer.echo(result.answer)
+    typer.echo("\nsources:")
+    for hit in result.sources:
+        typer.echo(f"  {hit.record_id} (score {hit.score:.3f})")
 
 
 def _fail(message: str) -> NoReturn:

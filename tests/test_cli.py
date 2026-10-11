@@ -96,10 +96,11 @@ def test_ask_unknown_bot_fails(project, llm):
 
 
 def test_ask_llm_error_fails_cleanly(project, monkeypatch):
-    def broken(config, secrets):
-        raise cli.LLMError("ollama: connection refused")
+    class DownLLM:
+        def chat(self, system, messages, json_mode=False):
+            raise cli.LLMError("ollama: connection refused")
 
-    monkeypatch.setattr(cli, "create_llm", broken)
+    monkeypatch.setattr(cli, "create_llm", lambda config, secrets: DownLLM())
     result = runner.invoke(cli.app, ["ask", "orders", "q"])
     assert result.exit_code == 1
     assert "ollama: connection refused" in result.output

@@ -11,7 +11,8 @@ MAX_TOKENS = 2048
 
 
 class AnthropicClient:
-    # No temperature: the current Messages API no longer accepts it.
+    # No temperature: messages.create in the anthropic SDK (>= 1.13) has no
+    # temperature parameter.
     def __init__(self, config: LLMConfig, api_key: str, client: Any = None):
         self.model = config.model
         self.client = client or anthropic.Anthropic(api_key=api_key)

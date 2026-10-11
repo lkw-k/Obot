@@ -42,8 +42,8 @@ class Bot:
         top_k: int | None = None,
     ) -> Answer:
         """Search route only; routing and Text-to-SQL come later."""
-        hits = retrieve(
-            question, self.embedder, self.qdrant, self.name, top_k or self.top_k
-        )
+        if top_k is None:
+            top_k = self.top_k
+        hits = retrieve(question, self.embedder, self.qdrant, self.name, top_k)
         answer = generate_answer(self.llm, question, hits, history or [])
         return Answer(answer=answer, route="search", sources=hits)

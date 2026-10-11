@@ -3,6 +3,7 @@
 import re
 import sqlite3
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,13 @@ from obot.core.schema import FALLBACK_ID_FIELD, Schema
 
 TABLE = "records"
 UPSERT_BATCH = 256
+
+
+@dataclass
+class Hit:
+    record_id: Any
+    score: float
+    record: dict[str, Any]
 
 
 class StoreLockedError(Exception):
@@ -77,6 +85,15 @@ def write_points(
 
 def count_points(client: QdrantClient, bot: str) -> int:
     return client.count(bot, exact=True).count
+
+
+def search_dense(
+    client: QdrantClient, bot: str, vector: list[float], limit: int
+) -> list[Hit]:
+    points = client.query_points(
+        bot, query=vector, using="dense", limit=limit, with_payload=True
+    ).points
+    return [Hit(p.payload["record_id"], p.score, p.payload["record"]) for p in points]
 
 
 def column_names(fields: list[str]) -> dict[str, str]:

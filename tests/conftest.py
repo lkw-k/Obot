@@ -28,3 +28,22 @@ class FakeEmbedder:
 @pytest.fixture
 def fake_embedder():
     return FakeEmbedder()
+
+
+class FakeLLM:
+    """Returns a fixed reply and records every call."""
+
+    def __init__(self, reply="fake answer"):
+        self.reply = reply
+        self.calls = []
+
+    def chat(self, system, messages, json_mode=False):
+        self.calls.append(
+            {"system": system, "messages": messages, "json_mode": json_mode}
+        )
+        return self.reply
+
+
+@pytest.fixture
+def fake_llm():
+    return FakeLLM()

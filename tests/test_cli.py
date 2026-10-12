@@ -71,3 +71,35 @@ def test_missing_configured_file_fails_without_traceback(project):
     assert result.exit_code == 1
     assert "file not found" in result.output
     assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+@pytest.fixture
+def llm(monkeypatch, fake_llm):
+    monkeypatch.setattr(cli, "create_llm", lambda config, secrets: fake_llm)
+    return fake_llm
+
+
+def test_ask_builds_then_answers_with_sources(project, llm):
+    result = runner.invoke(cli.app, ["ask", "orders", "who ordered?"])
+
+    assert result.exit_code == 0, result.output
+    assert "fake answer" in result.output
+    assert "sources:" in result.output
+    assert result.output.count("(score ") == 5  # retrieval.top_k default
+    assert "Question: who ordered?" in llm.calls[0]["messages"][-1]["content"]
+
+
+def test_ask_unknown_bot_fails(project, llm):
+    result = runner.invoke(cli.app, ["ask", "nope", "q"])
+    assert result.exit_code == 1
+    assert "unknown bot 'nope'" in result.output
+
+
+def test_ask_llm_error_fails_cleanly(project, monkeypatch):
+    def broken(config, secrets):
+        raise cli.LLMError("ollama: connection refused")
+
+    monkeypatch.setattr(cli, "create_llm", broken)
+    result = runner.invoke(cli.app, ["ask", "orders", "q"])
+    assert result.exit_code == 1
+    assert "ollama: connection refused" in result.output

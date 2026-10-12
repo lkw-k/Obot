@@ -394,9 +394,9 @@ Each phase must meet its completion criteria before moving on. One phase = one b
   - Done when: settings object is created from `config.example.yaml`, missing key raises an error, CI runs on PRs
 - [x] **2. Loading + schema analysis** `feat/loader`
   - Done when: `schema.json` is generated from the sample files in `examples/`, tests pass
-- [ ] **3. Chunking + embedding + storage** `feat/embedding`
+- [x] **3. Chunking + embedding + storage** `feat/embedding`
   - Done when: after building the samples, Qdrant point count = SQLite row count = record count; rerunning skips the build
-- [ ] **4. Search + answer (dense only)** `feat/retrieval`
+- [x] **4. Search + answer (dense only)** `feat/retrieval`
   - Done when: `obot ask` returns an answer with sources
 - [ ] **5. API server** `feat/api`
   - Done when: all endpoints work in `/docs`; 409 is returned during a build

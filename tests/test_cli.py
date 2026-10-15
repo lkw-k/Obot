@@ -104,3 +104,20 @@ def test_ask_llm_error_fails_cleanly(project, monkeypatch):
     result = runner.invoke(cli.app, ["ask", "orders", "q"])
     assert result.exit_code == 1
     assert "ollama: connection refused" in result.output
+
+
+def test_serve_missing_provider_key_fails(project):
+    (project / "config.yaml").write_text("llm:\n  provider: openai\n")
+    result = runner.invoke(cli.app, ["serve"])
+    assert result.exit_code == 1
+    assert "OPENAI_API_KEY" in result.output
+
+
+def test_serve_locked_storage_fails(project, llm):
+    holder = open_qdrant(project / "storage" / "qdrant")
+    try:
+        result = runner.invoke(cli.app, ["serve"])
+    finally:
+        holder.close()
+    assert result.exit_code == 1
+    assert "in use by another process" in result.output

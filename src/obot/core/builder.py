@@ -3,6 +3,8 @@
 import hashlib
 import json
 import logging
+import queue
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -39,11 +41,12 @@ def build_bot(
     get_embedder: Callable[[], Embedder],
     qdrant: QdrantClient,
     storage_dir: str | Path = "storage",
+    force: bool = False,
 ) -> BuildResult:
     """Build one bot, or skip it if nothing changed since the last build.
 
     get_embedder is called only when a build is needed, so skipped runs do not
-    load the model.
+    load the model. force=True rebuilds even when nothing changed.
     """
     for f in bot.files:
         if not Path(f).is_file():
@@ -58,7 +61,8 @@ def build_bot(
     }
     previous = _read_manifest(manifest_path)
     if (
-        previous is not None
+        not force
+        and previous is not None
         and "record_count" in previous
         and all(previous.get(k) == v for k, v in fingerprint.items())
         and qdrant.collection_exists(bot.name)
@@ -104,6 +108,92 @@ def build_bot(
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     logger.info("%s: built %d records", bot.name, len(records))
     return BuildResult(bot.name, False, len(records))
+
+
+class Locked:
+    """Proxy that runs every method call of the wrapped object under one lock."""
+
+    def __init__(self, obj: Any):
+        self._obj = obj
+        self._lock = threading.Lock()
+
+    def __getattr__(self, name: str) -> Any:
+        attr = getattr(self._obj, name)
+        if not callable(attr):
+            return attr
+
+        def call(*args: Any, **kwargs: Any) -> Any:
+            with self._lock:
+                return attr(*args, **kwargs)
+
+        return call
+
+
+class BuildInProgressError(Exception):
+    """The bot is already queued or building."""
+
+
+class BuildManager:
+    """Builds bots one at a time on a background thread and tracks their status."""
+
+    def __init__(
+        self,
+        bots: list[BotConfig],
+        settings: Settings,
+        get_embedder: Callable[[], Embedder],
+        qdrant: QdrantClient,
+        storage_dir: str | Path = "storage",
+    ):
+        self.bots = {b.name: b for b in bots}
+        self.settings = settings
+        self.get_embedder = get_embedder
+        self.qdrant = qdrant
+        self.storage_dir = Path(storage_dir)
+        self.status: dict[str, str] = {}
+        self.errors: dict[str, str] = {}
+        self._lock = threading.Lock()
+        self._queue: queue.Queue[tuple[str, bool] | None] = queue.Queue()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def start(self) -> None:
+        with self._lock:
+            for name in self.bots:
+                self.status[name] = "building"
+                self._queue.put((name, False))
+        self._thread.start()
+
+    def rebuild(self, name: str) -> None:
+        with self._lock:
+            if self.status.get(name) == "building":
+                raise BuildInProgressError(f"bot '{name}' is already building")
+            self.status[name] = "building"
+            self.errors.pop(name, None)
+            self._queue.put((name, True))
+
+    def stop(self) -> None:
+        self._queue.put(None)
+        self._thread.join()
+
+    def _run(self) -> None:
+        while (item := self._queue.get()) is not None:
+            name, force = item
+            try:
+                build_bot(
+                    self.bots[name],
+                    self.settings,
+                    self.get_embedder,
+                    self.qdrant,
+                    self.storage_dir,
+                    force=force,
+                )
+            except Exception as e:
+                logger.exception("%s: build failed", name)
+                with self._lock:
+                    self.status[name] = "failed"
+                    self.errors[name] = str(e)
+            else:
+                with self._lock:
+                    self.status[name] = "ready"
 
 
 def _key(path: Path) -> str:

@@ -1,11 +1,16 @@
 import json
 import shutil
+import time
 from pathlib import Path
 
 import pytest
 
 from obot.config import BotConfig, Settings
-from obot.core.builder import build_bot
+from obot.core.builder import (
+    BuildInProgressError,
+    BuildManager,
+    build_bot,
+)
 from obot.core.loader import LoadError, load_file
 from obot.core.schema import load_schema
 from obot.core.store import count_points, count_rows, open_qdrant
@@ -142,3 +147,46 @@ def test_reserved_obot_id_field_fails(tmp_path, qdrant, storage, fake_embedder):
     bot = BotConfig(name="dup", files=[data])
     with pytest.raises(LoadError, match="reserved"):
         build_bot(bot, Settings(), lambda: fake_embedder, qdrant, storage)
+
+
+def test_force_rebuilds_unchanged_bot(bots, qdrant, storage, fake_embedder):
+    _build_all(bots, qdrant, storage, fake_embedder)
+
+    result = build_bot(
+        bots[0], Settings(), lambda: fake_embedder, qdrant, storage, force=True
+    )
+
+    assert not result.skipped
+
+
+def test_build_manager_tracks_status(tmp_path, bots, qdrant, storage, fake_embedder):
+    broken = BotConfig(name="broken", files=[tmp_path / "missing.csv"])
+    manager = BuildManager(
+        [bots[0], broken], Settings(), lambda: fake_embedder, qdrant, storage
+    )
+
+    manager.start()
+    assert manager.status == {"products": "building", "broken": "building"}
+    with pytest.raises(BuildInProgressError):
+        manager.rebuild("products")
+    manager.stop()
+
+    assert manager.status == {"products": "ready", "broken": "failed"}
+    assert "file not found" in manager.errors["broken"]
+
+
+def test_build_manager_rebuild_forces_build(bots, qdrant, storage, fake_embedder):
+    manager = BuildManager(
+        [bots[0]], Settings(), lambda: fake_embedder, qdrant, storage
+    )
+    manager.start()
+    for _ in range(200):
+        if manager.status["products"] == "ready":
+            break
+        time.sleep(0.05)
+
+    manager.rebuild("products")
+    manager.stop()
+
+    assert manager.status["products"] == "ready"
+    assert len(fake_embedder.calls) == 2

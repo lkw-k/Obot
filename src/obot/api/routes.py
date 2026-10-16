@@ -1,7 +1,5 @@
 """API routes."""
 
-import json
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from obot.api.auth import require_api_key
@@ -31,10 +29,9 @@ def get_bot(name: str, request: Request) -> BotDetail:
     status = builds.status[name]
     detail = BotDetail(name=name, status=status, error=builds.errors.get(name))
     if status == "ready":
-        bot_dir = builds.storage_dir / name
-        manifest = json.loads((bot_dir / "manifest.json").read_text(encoding="utf-8"))
-        detail.record_count = manifest["record_count"]
-        detail.schema_ = load_schema(bot_dir / "schema.json").model_dump()
+        detail.record_count = builds.record_counts[name]
+        schema = load_schema(builds.storage_dir / name / "schema.json")
+        detail.schema_ = schema.model_dump()
     return detail
 
 

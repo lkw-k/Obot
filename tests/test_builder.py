@@ -1,5 +1,6 @@
 import json
 import shutil
+import threading
 import time
 from pathlib import Path
 
@@ -159,19 +160,32 @@ def test_force_rebuilds_unchanged_bot(bots, qdrant, storage, fake_embedder):
     assert not result.skipped
 
 
-def test_build_manager_tracks_status(tmp_path, bots, qdrant, storage, fake_embedder):
+def _wait_idle(manager):
+    for _ in range(200):
+        if "building" not in manager.status.values():
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"still building: {manager.status}")
+
+
+def test_build_manager_tracks_status(
+    tmp_path, bots, qdrant, storage, blocking_embedder
+):
     broken = BotConfig(name="broken", files=[tmp_path / "missing.csv"])
     manager = BuildManager(
-        [bots[0], broken], Settings(), lambda: fake_embedder, qdrant, storage
+        [bots[0], broken], Settings(), lambda: blocking_embedder, qdrant, storage
     )
 
     manager.start()
     assert manager.status == {"products": "building", "broken": "building"}
     with pytest.raises(BuildInProgressError):
         manager.rebuild("products")
+    blocking_embedder.release.set()
+    _wait_idle(manager)
     manager.stop()
 
     assert manager.status == {"products": "ready", "broken": "failed"}
+    assert manager.record_counts == {"products": 24}
     assert "file not found" in manager.errors["broken"]
 
 
@@ -180,13 +194,27 @@ def test_build_manager_rebuild_forces_build(bots, qdrant, storage, fake_embedder
         [bots[0]], Settings(), lambda: fake_embedder, qdrant, storage
     )
     manager.start()
-    for _ in range(200):
-        if manager.status["products"] == "ready":
-            break
-        time.sleep(0.05)
+    _wait_idle(manager)
 
     manager.rebuild("products")
+    _wait_idle(manager)
     manager.stop()
 
     assert manager.status["products"] == "ready"
     assert len(fake_embedder.calls) == 2
+
+
+def test_build_manager_stop_skips_queued_builds(
+    bots, qdrant, storage, blocking_embedder
+):
+    manager = BuildManager(bots, Settings(), lambda: blocking_embedder, qdrant, storage)
+    manager.start()
+    # Wait until the worker has taken the first bot; the other two stay queued.
+    while manager._queue.qsize() > len(bots) - 1:
+        time.sleep(0.01)
+    # Release only after stop() has drained the queue.
+    threading.Timer(0.2, blocking_embedder.release.set).start()
+
+    manager.stop()
+
+    assert len(blocking_embedder.inner.calls) == 1

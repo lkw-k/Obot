@@ -151,6 +151,8 @@ class BuildManager:
         self.storage_dir = Path(storage_dir)
         self.status: dict[str, str] = {}
         self.errors: dict[str, str] = {}
+        # Kept in memory: a rebuild removes manifest.json while it runs.
+        self.record_counts: dict[str, int] = {}
         self._lock = threading.Lock()
         self._queue: queue.Queue[tuple[str, bool] | None] = queue.Queue()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -171,6 +173,12 @@ class BuildManager:
             self._queue.put((name, True))
 
     def stop(self) -> None:
+        # Drop queued builds so shutdown waits only for the one in progress.
+        while True:
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
         self._queue.put(None)
         self._thread.join()
 
@@ -178,7 +186,7 @@ class BuildManager:
         while (item := self._queue.get()) is not None:
             name, force = item
             try:
-                build_bot(
+                result = build_bot(
                     self.bots[name],
                     self.settings,
                     self.get_embedder,
@@ -194,6 +202,7 @@ class BuildManager:
             else:
                 with self._lock:
                     self.status[name] = "ready"
+                    self.record_counts[name] = result.record_count
 
 
 def _key(path: Path) -> str:

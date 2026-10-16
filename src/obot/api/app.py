@@ -85,6 +85,14 @@ def create_app(
             status_code=422,
         )
 
+    @app.exception_handler(Exception)
+    async def internal_error(request: Request, exc: Exception) -> JSONResponse:
+        # Without this, Starlette answers unexpected errors in plain text (§7).
+        return JSONResponse(
+            {"error": {"code": "INTERNAL_ERROR", "message": "internal server error"}},
+            status_code=500,
+        )
+
     @app.exception_handler(LLMError)
     async def llm_error(request: Request, exc: LLMError) -> JSONResponse:
         return JSONResponse(

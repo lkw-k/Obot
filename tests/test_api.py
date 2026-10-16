@@ -1,5 +1,4 @@
 import shutil
-import threading
 import time
 from pathlib import Path
 
@@ -11,18 +10,6 @@ from obot.config import BotConfig, Secrets, Settings
 from obot.llm.base import LLMError
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
-
-
-class BlockingEmbedder:
-    """Holds builds until released, so tests can observe the building status."""
-
-    def __init__(self, inner):
-        self.inner = inner
-        self.release = threading.Event()
-
-    def encode(self, texts):
-        self.release.wait(timeout=10)
-        return self.inner.encode(texts)
 
 
 class FailingLLM:
@@ -145,16 +132,15 @@ def test_rebuild_returns_202_and_becomes_ready(client):
 
 
 def test_building_bot_rejects_chat_and_rebuild_with_409(
-    tmp_path, bots, fake_embedder, fake_llm
+    tmp_path, bots, blocking_embedder, fake_llm
 ):
-    embedder = BlockingEmbedder(fake_embedder)
-    with _client(tmp_path, bots, embedder, fake_llm) as c:
+    with _client(tmp_path, bots, blocking_embedder, fake_llm) as c:
         try:
             assert c.get("/bots/orders").json()["status"] == "building"
             chat = c.post("/bots/orders/chat", json={"message": "q"})
             rebuild = c.post("/bots/orders/rebuild")
         finally:
-            embedder.release.set()
+            blocking_embedder.release.set()
 
     assert chat.status_code == 409
     assert chat.json()["error"]["code"] == "BOT_NOT_READY"
@@ -180,6 +166,23 @@ def test_llm_error_is_502(tmp_path, bots, fake_embedder):
 
     assert response.status_code == 502
     assert response.json()["error"] == {"code": "LLM_ERROR", "message": "provider down"}
+
+
+def test_unexpected_error_is_json_500(tmp_path, bots, fake_embedder):
+    class BrokenLLM:
+        def chat(self, system, messages, json_mode=False):
+            raise RuntimeError("boom")
+
+    settings = Settings(secrets=Secrets(_env_file=None))
+    app = create_app(
+        settings, bots, BrokenLLM(), lambda: fake_embedder, tmp_path / "storage"
+    )
+    with TestClient(app, raise_server_exceptions=False) as c:
+        _wait_status(c, "orders", "ready")
+        response = c.post("/bots/orders/chat", json={"message": "q"})
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
 
 
 def test_api_key_required_when_set(tmp_path, bots, fake_embedder, fake_llm):

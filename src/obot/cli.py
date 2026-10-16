@@ -26,6 +26,24 @@ def main() -> None:
 
 
 @app.command()
+def serve() -> None:
+    """Run the API server; bots build in the background."""
+    # Imported here so build / ask do not load FastAPI.
+    import uvicorn
+
+    from obot.api.app import create_app
+
+    try:
+        settings = load_settings()
+        bots = resolve_bots(settings)
+        llm = create_llm(settings.llm, settings.secrets)
+        api = create_app(settings, bots, llm, get_embedder, STORAGE_DIR)
+        uvicorn.run(api, host=settings.server.host, port=settings.server.port)
+    except (ConfigError, StoreLockedError) as e:
+        _fail(str(e))
+
+
+@app.command()
 def build(
     bot: Annotated[str | None, typer.Option(help="Build only this bot.")] = None,
 ) -> None:

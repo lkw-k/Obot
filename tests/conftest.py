@@ -1,4 +1,5 @@
 import hashlib
+import threading
 
 import pytest
 
@@ -28,6 +29,25 @@ class FakeEmbedder:
 @pytest.fixture
 def fake_embedder():
     return FakeEmbedder()
+
+
+class BlockingEmbedder:
+    """Holds builds until released, so tests can observe the building status."""
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.release = threading.Event()
+
+    def encode(self, texts):
+        self.release.wait(timeout=10)
+        return self.inner.encode(texts)
+
+
+@pytest.fixture
+def blocking_embedder(fake_embedder):
+    embedder = BlockingEmbedder(fake_embedder)
+    yield embedder
+    embedder.release.set()
 
 
 class FakeLLM:

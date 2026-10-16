@@ -397,16 +397,16 @@ Each phase must meet its completion criteria before moving on. One phase = one b
   - Done when: `schema.json` is generated from the sample files in `examples/`, tests pass
 - [x] **3. Chunking + embedding + storage** `feat/embedding`
   - Done when: after building the samples, Qdrant point count = SQLite row count = record count; rerunning skips the build
-- [ ] **4. Search + answer (dense only)** `feat/retrieval`
+- [x] **4. Search + answer (dense only)** `feat/retrieval`
   - Done when: `obot ask` returns an answer with sources
-- [ ] **5. API server** `feat/api`
-  - Done when: all endpoints work in `/docs`; 409 is returned during a build
+- [x] **5. API server** `feat/api`
+  - Done when: all endpoints work in `/docs`; 409 is returned during a build; 401 is returned when `OBOT_API_KEY` is set and the key is wrong
 - [ ] **6. Hybrid search** `feat/hybrid`
   - Done when: sparse + RRF applied; results improve for exact product name / ID queries
 - [ ] **7. Routing + Text-to-SQL** `feat/sql`
   - Done when: "how many" and "most expensive" questions are routed to aggregate; safety tests pass
 - [ ] **8. Deployment prep** `chore/docker`
-  - Done when: Dockerfile, API key auth, sample data, README demo GIF
+  - Done when: Dockerfile, sample data, README demo GIF
 
 ---
 

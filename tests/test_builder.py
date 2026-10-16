@@ -1,11 +1,17 @@
 import json
 import shutil
+import threading
+import time
 from pathlib import Path
 
 import pytest
 
 from obot.config import BotConfig, Settings
-from obot.core.builder import build_bot
+from obot.core.builder import (
+    BuildInProgressError,
+    BuildManager,
+    build_bot,
+)
 from obot.core.loader import LoadError, load_file
 from obot.core.schema import load_schema
 from obot.core.store import count_points, count_rows, open_qdrant
@@ -142,3 +148,73 @@ def test_reserved_obot_id_field_fails(tmp_path, qdrant, storage, fake_embedder):
     bot = BotConfig(name="dup", files=[data])
     with pytest.raises(LoadError, match="reserved"):
         build_bot(bot, Settings(), lambda: fake_embedder, qdrant, storage)
+
+
+def test_force_rebuilds_unchanged_bot(bots, qdrant, storage, fake_embedder):
+    _build_all(bots, qdrant, storage, fake_embedder)
+
+    result = build_bot(
+        bots[0], Settings(), lambda: fake_embedder, qdrant, storage, force=True
+    )
+
+    assert not result.skipped
+
+
+def _wait_idle(manager):
+    for _ in range(200):
+        if "building" not in manager.status.values():
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"still building: {manager.status}")
+
+
+def test_build_manager_tracks_status(
+    tmp_path, bots, qdrant, storage, blocking_embedder
+):
+    broken = BotConfig(name="broken", files=[tmp_path / "missing.csv"])
+    manager = BuildManager(
+        [bots[0], broken], Settings(), lambda: blocking_embedder, qdrant, storage
+    )
+
+    manager.start()
+    assert manager.status == {"products": "building", "broken": "building"}
+    with pytest.raises(BuildInProgressError):
+        manager.rebuild("products")
+    blocking_embedder.release.set()
+    _wait_idle(manager)
+    manager.stop()
+
+    assert manager.status == {"products": "ready", "broken": "failed"}
+    assert manager.record_counts == {"products": 24}
+    assert "file not found" in manager.errors["broken"]
+
+
+def test_build_manager_rebuild_forces_build(bots, qdrant, storage, fake_embedder):
+    manager = BuildManager(
+        [bots[0]], Settings(), lambda: fake_embedder, qdrant, storage
+    )
+    manager.start()
+    _wait_idle(manager)
+
+    manager.rebuild("products")
+    _wait_idle(manager)
+    manager.stop()
+
+    assert manager.status["products"] == "ready"
+    assert len(fake_embedder.calls) == 2
+
+
+def test_build_manager_stop_skips_queued_builds(
+    bots, qdrant, storage, blocking_embedder
+):
+    manager = BuildManager(bots, Settings(), lambda: blocking_embedder, qdrant, storage)
+    manager.start()
+    # Wait until the worker has taken the first bot; the other two stay queued.
+    while manager._queue.qsize() > len(bots) - 1:
+        time.sleep(0.01)
+    # Release only after stop() has drained the queue.
+    threading.Timer(0.2, blocking_embedder.release.set).start()
+
+    manager.stop()
+
+    assert len(blocking_embedder.inner.calls) == 1

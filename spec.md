@@ -399,7 +399,7 @@ Each phase must meet its completion criteria before moving on. One phase = one b
   - Done when: after building the samples, Qdrant point count = SQLite row count = record count; rerunning skips the build
 - [x] **4. Search + answer (dense only)** `feat/retrieval`
   - Done when: `obot ask` returns an answer with sources
-- [ ] **5. API server** `feat/api`
+- [x] **5. API server** `feat/api`
   - Done when: all endpoints work in `/docs`; 409 is returned during a build; 401 is returned when `OBOT_API_KEY` is set and the key is wrong
 - [ ] **6. Hybrid search** `feat/hybrid`
   - Done when: sparse + RRF applied; results improve for exact product name / ID queries

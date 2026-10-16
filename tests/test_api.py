@@ -110,6 +110,17 @@ def test_invalid_chat_request_is_422(client, body):
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
+def test_undecodable_body_is_422(client):
+    response = client.post(
+        "/bots/orders/chat",
+        content='{"message": "서울"}'.encode("cp949"),
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
 @pytest.mark.parametrize(
     ("method", "path"),
     [

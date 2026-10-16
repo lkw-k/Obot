@@ -62,6 +62,13 @@ def create_app(
     async def http_error(request: Request, exc: HTTPException) -> JSONResponse:
         if isinstance(exc.detail, dict):
             error = exc.detail
+        elif exc.status_code == 400:
+            # FastAPI's own 400 for a body it cannot decode (e.g. not UTF-8);
+            # spec §7 reports every invalid request as 422.
+            return JSONResponse(
+                {"error": {"code": "INVALID_REQUEST", "message": str(exc.detail)}},
+                status_code=422,
+            )
         else:
             error = {"code": f"HTTP_{exc.status_code}", "message": str(exc.detail)}
         return JSONResponse({"error": error}, status_code=exc.status_code)

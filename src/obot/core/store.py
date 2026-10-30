@@ -96,6 +96,19 @@ def search_dense(
     return _to_hits(points)
 
 
+def search_sparse(
+    client: QdrantClient, bot: str, sparse: dict[int, float], limit: int
+) -> list[Hit]:
+    points = client.query_points(
+        bot,
+        query=models.SparseVector(indices=list(sparse), values=list(sparse.values())),
+        using="sparse",
+        limit=limit,
+        with_payload=True,
+    ).points
+    return _to_hits(points)
+
+
 def _to_hits(points: list[models.ScoredPoint]) -> list[Hit]:
     return [Hit(p.payload["record_id"], p.score, p.payload["record"]) for p in points]
 

@@ -93,6 +93,10 @@ def search_dense(
     points = client.query_points(
         bot, query=vector, using="dense", limit=limit, with_payload=True
     ).points
+    return _to_hits(points)
+
+
+def _to_hits(points: list[models.ScoredPoint]) -> list[Hit]:
     return [Hit(p.payload["record_id"], p.score, p.payload["record"]) for p in points]
 
 

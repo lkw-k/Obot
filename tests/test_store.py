@@ -11,6 +11,7 @@ from obot.core.store import (
     count_rows,
     open_qdrant,
     point_id,
+    search_sparse,
     write_points,
     write_records,
 )
@@ -60,6 +61,27 @@ def test_write_points_recreates_collection(qdrant):
     write_points(qdrant, "bot", [1, 2, 3], [{}, {}, {}], _emb(3))
     write_points(qdrant, "bot", [1], [{}], _emb(1))
     assert count_points(qdrant, "bot") == 1
+
+
+def test_search_sparse_orders_by_token_overlap(qdrant):
+    embeddings = [
+        Embedding(dense=[1.0] * 1024, sparse={1: 0.1}),
+        Embedding(dense=[1.0] * 1024, sparse={1: 0.9, 2: 0.5}),
+        Embedding(dense=[1.0] * 1024, sparse={3: 1.0}),
+    ]
+    write_points(qdrant, "bot", ["a", "b", "c"], [{}, {"id": "b"}, {}], embeddings)
+
+    hits = search_sparse(qdrant, "bot", {1: 1.0, 2: 1.0}, limit=5)
+
+    assert [h.record_id for h in hits] == ["b", "a"]
+    assert hits[0].record == {"id": "b"}
+    assert hits[0].score > hits[1].score
+
+
+def test_search_sparse_respects_limit(qdrant):
+    write_points(qdrant, "bot", [1, 2, 3], [{}, {}, {}], _emb(3))
+    hits = search_sparse(qdrant, "bot", {1: 1.0, 2: 1.0, 3: 1.0}, limit=2)
+    assert len(hits) == 2
 
 
 def test_second_client_on_same_folder_is_locked(tmp_path, qdrant):

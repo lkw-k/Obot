@@ -1,8 +1,8 @@
 import pytest
 
 from obot.core.embedder import DENSE_DIM, Embedding
-from obot.core.retriever import retrieve
-from obot.core.store import open_qdrant, write_points
+from obot.core.retriever import retrieve, rrf
+from obot.core.store import Hit, open_qdrant, write_points
 
 
 def _vec(*hot):
@@ -46,3 +46,22 @@ def test_retrieve_returns_top_k(qdrant):
     hits = retrieve("q", QueryEmbedder(_vec(2)), qdrant, "bot", top_k=1)
 
     assert [h.record_id for h in hits] == ["c"]
+
+
+def _hits(*ids):
+    return [Hit(i, 0.0, {"id": i}) for i in ids]
+
+
+def test_rrf_scores_sum_reciprocal_ranks():
+    fused = rrf([_hits("a", "b"), _hits("b", "a")], top_k=2)
+
+    assert {h.record_id for h in fused} == {"a", "b"}
+    assert fused[0].score == pytest.approx(1 / 61 + 1 / 62)
+    assert fused[1].score == pytest.approx(1 / 61 + 1 / 62)
+
+
+def test_rrf_single_ranking_keeps_order():
+    fused = rrf([_hits("a", "b", "c")], top_k=3)
+
+    assert [h.record_id for h in fused] == ["a", "b", "c"]
+    assert [h.score for h in fused] == pytest.approx([1 / 61, 1 / 62, 1 / 63])

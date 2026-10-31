@@ -65,3 +65,26 @@ def test_rrf_single_ranking_keeps_order():
 
     assert [h.record_id for h in fused] == ["a", "b", "c"]
     assert [h.score for h in fused] == pytest.approx([1 / 61, 1 / 62, 1 / 63])
+
+
+def test_rrf_overlap_beats_single_list_top():
+    fused = rrf([_hits("a", "b", "c"), _hits("x", "b", "y")], top_k=5)
+
+    assert fused[0].record_id == "b"
+    assert len(fused) == 5
+
+
+def test_rrf_disjoint_lists_interleave_and_truncate():
+    fused = rrf([_hits("a", "b"), _hits("x", "y")], top_k=3)
+
+    assert [h.score for h in fused] == pytest.approx([1 / 61, 1 / 61, 1 / 62])
+    assert {h.record_id for h in fused[:2]} == {"a", "x"}
+
+
+def test_rrf_keeps_record_from_first_occurrence():
+    first = [Hit("a", 0.9, {"src": "dense"})]
+    second = [Hit("a", 0.1, {"src": "sparse"})]
+
+    (hit,) = rrf([first, second], top_k=1)
+
+    assert hit.record == {"src": "dense"}

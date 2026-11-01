@@ -15,7 +15,9 @@ def retrieve(
     """Dense search only; sparse search and RRF come with hybrid search."""
     (embedding,) = embedder.encode([question])
     limit = top_k * CANDIDATE_FACTOR
-    return store.search_dense(qdrant, bot, embedding.dense, limit)[:top_k]
+    dense = store.search_dense(qdrant, bot, embedding.dense, limit)
+    sparse = store.search_sparse(qdrant, bot, embedding.sparse, limit)
+    return rrf([dense, sparse], top_k)
 
 
 def rrf(rankings: list[list[store.Hit]], top_k: int) -> list[store.Hit]:

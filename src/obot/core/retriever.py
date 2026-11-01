@@ -6,6 +6,7 @@ from obot.core import store
 from obot.core.embedder import Embedder
 
 RRF_K = 60
+CANDIDATE_FACTOR = 4
 
 
 def retrieve(
@@ -13,7 +14,8 @@ def retrieve(
 ) -> list[store.Hit]:
     """Dense search only; sparse search and RRF come with hybrid search."""
     (embedding,) = embedder.encode([question])
-    return store.search_dense(qdrant, bot, embedding.dense, top_k)
+    limit = top_k * CANDIDATE_FACTOR
+    return store.search_dense(qdrant, bot, embedding.dense, limit)[:top_k]
 
 
 def rrf(rankings: list[list[store.Hit]], top_k: int) -> list[store.Hit]:

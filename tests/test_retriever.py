@@ -13,11 +13,12 @@ def _vec(*hot):
 
 
 class QueryEmbedder:
-    def __init__(self, vector):
+    def __init__(self, vector, sparse=None):
         self.vector = vector
+        self.sparse = sparse or {}
 
     def encode(self, texts):
-        return [Embedding(dense=self.vector, sparse={}) for _ in texts]
+        return [Embedding(dense=self.vector, sparse=self.sparse) for _ in texts]
 
 
 @pytest.fixture
@@ -39,7 +40,17 @@ def test_retrieve_orders_by_dense_similarity(qdrant):
 
     assert [h.record_id for h in hits] == ["a", "b", "c"]
     assert hits[0].record == {"id": "a"}
-    assert hits[0].score > hits[1].score > hits[2].score
+    assert [h.score for h in hits] == pytest.approx([1 / 61, 1 / 62, 1 / 63])
+
+
+def test_retrieve_fuses_dense_and_sparse_ranks(qdrant):
+    # dense ranks a > b > c, sparse ranks b first: b wins on the summed score
+    embedder = QueryEmbedder(_vec(0), sparse={2: 1.0})
+
+    hits = retrieve("q", embedder, qdrant, "bot", top_k=3)
+
+    assert hits[0].record_id == "b"
+    assert hits[0].score == pytest.approx(1 / 62 + 1 / 61)
 
 
 def test_retrieve_returns_top_k(qdrant):

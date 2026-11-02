@@ -84,6 +84,12 @@ def test_search_sparse_respects_limit(qdrant):
     assert len(hits) == 2
 
 
+def test_search_sparse_empty_query_returns_no_hits(qdrant):
+    # retrieve() relies on this when a question has no sparse tokens
+    write_points(qdrant, "bot", [1, 2], [{}, {}], _emb(2))
+    assert search_sparse(qdrant, "bot", {}, limit=5) == []
+
+
 def test_second_client_on_same_folder_is_locked(tmp_path, qdrant):
     with pytest.raises(StoreLockedError, match="obot serve"):
         open_qdrant(tmp_path / "qdrant")

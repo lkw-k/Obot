@@ -2,7 +2,7 @@ import pytest
 
 from obot.core.embedder import DENSE_DIM, Embedding
 from obot.core.retriever import retrieve, rrf
-from obot.core.store import Hit, open_qdrant, write_points
+from obot.core.store import Hit, open_qdrant, search_dense, write_points
 
 
 def _vec(*hot):
@@ -99,3 +99,20 @@ def test_rrf_keeps_record_from_first_occurrence():
     (hit,) = rrf([first, second], top_k=1)
 
     assert hit.record == {"src": "dense"}
+
+
+def test_exact_id_query_is_rescued_by_sparse_search(tmp_path):
+    # "P-1005" is semantically far from the query but shares its exact token
+    client = open_qdrant(tmp_path / "ids")
+    ids = [f"P-100{i}" for i in range(6)]
+    embeddings = [Embedding(dense=_vec(0, i + 1), sparse={i: 1.0}) for i in range(5)]
+    embeddings.append(Embedding(dense=_vec(9), sparse={99: 1.0}))
+    write_points(client, "bot", ids, [{"id": i} for i in ids], embeddings)
+    embedder = QueryEmbedder(_vec(0), sparse={99: 1.0})
+
+    dense_only = search_dense(client, "bot", _vec(0), limit=2)
+    hits = retrieve("P-1005", embedder, client, "bot", top_k=2)
+    client.close()
+
+    assert "P-1005" not in [h.record_id for h in dense_only]
+    assert hits[0].record_id == "P-1005"

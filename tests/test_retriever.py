@@ -116,3 +116,11 @@ def test_exact_id_query_is_rescued_by_sparse_search(tmp_path):
 
     assert "P-1005" not in [h.record_id for h in dense_only]
     assert hits[0].record_id == "P-1005"
+
+
+def test_retrieve_returns_each_record_once(qdrant):
+    embedder = QueryEmbedder(_vec(0), sparse={1: 1.0, 2: 1.0, 3: 1.0})
+
+    hits = retrieve("q", embedder, qdrant, "bot", top_k=5)
+
+    assert sorted(h.record_id for h in hits) == ["a", "b", "c"]

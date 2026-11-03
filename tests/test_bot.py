@@ -37,3 +37,10 @@ def test_ask_passes_history_and_top_k(bot, fake_llm):
 
     assert len(result.sources) == 1
     assert fake_llm.calls[0]["messages"][:-1] == history
+
+
+def test_ask_ranks_exact_id_match_first(bot):
+    result = bot.ask("P-2")
+
+    assert result.sources[0].record_id == "P-2"
+    assert result.sources[0].score > 1 / 61  # dense + sparse rank contributions

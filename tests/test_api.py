@@ -76,6 +76,14 @@ def test_chat_returns_answer_with_sources(client):
     assert {"id", "score", "record"} <= body["sources"][0].keys()
 
 
+def test_chat_sources_carry_rrf_scores(client):
+    sources = client.post("/bots/orders/chat", json={"message": "q"}).json()["sources"]
+
+    scores = [s["score"] for s in sources]
+    assert scores == sorted(scores, reverse=True)
+    assert all(0 < s <= 2 / 61 for s in scores)  # at most rank 1 in both lists
+
+
 def test_chat_passes_history_and_top_k(client, fake_llm):
     history = [{"role": "user", "content": "hi"}]
 

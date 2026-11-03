@@ -12,7 +12,7 @@ CANDIDATE_FACTOR = 4
 def retrieve(
     question: str, embedder: Embedder, qdrant: QdrantClient, bot: str, top_k: int
 ) -> list[store.Hit]:
-    """Dense search only; sparse search and RRF come with hybrid search."""
+    """Dense + sparse search, each top_k x CANDIDATE_FACTOR, fused with RRF."""
     (embedding,) = embedder.encode([question])
     limit = top_k * CANDIDATE_FACTOR
     dense = store.search_dense(qdrant, bot, embedding.dense, limit)

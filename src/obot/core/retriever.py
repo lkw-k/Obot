@@ -1,5 +1,7 @@
 """Search for the records relevant to a question (spec §6.2)."""
 
+from typing import Any
+
 from qdrant_client import QdrantClient
 
 from obot.core import store
@@ -22,8 +24,8 @@ def retrieve(
 
 def rrf(rankings: list[list[store.Hit]], top_k: int) -> list[store.Hit]:
     """Reciprocal rank fusion: score = Σ 1 / (RRF_K + rank), rank from 1."""
-    scores: dict = {}
-    hits: dict = {}
+    scores: dict[Any, float] = {}
+    hits: dict[Any, store.Hit] = {}
     for ranking in rankings:
         for rank, hit in enumerate(ranking, start=1):
             scores[hit.record_id] = scores.get(hit.record_id, 0.0) + 1 / (RRF_K + rank)

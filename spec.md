@@ -76,8 +76,12 @@ obot/
 ├── storage/                # build output (git-ignored)
 ├── examples/               # sample data
 ├── tests/                  # conftest.py: fake embedder / LLM
+├── docker/config.yaml      # container config: host 0.0.0.0, Ollama via host.docker.internal
+├── docs/demo.tape          # vhs script that renders docs/demo.gif
 ├── .github/workflows/test.yml
 ├── scripts/verify.sh       # pre-push verification (Section 11.3)
+├── Dockerfile
+├── .dockerignore
 ├── config.example.yaml
 ├── .env.example
 └── pyproject.toml

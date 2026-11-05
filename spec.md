@@ -409,7 +409,7 @@ Each phase must meet its completion criteria before moving on. One phase = one b
   - Done when: sparse + RRF applied; results improve for exact product name / ID queries
 - [x] **7. Routing + Text-to-SQL** `feat/sql`
   - Done when: "how many" and "most expensive" questions are routed to aggregate; safety tests pass
-- [ ] **8. Deployment prep** `chore/docker`
+- [x] **8. Deployment prep** `chore/docker`
   - Done when: Dockerfile, sample data, README demo GIF
 
 ---

@@ -76,8 +76,12 @@ obot/
 ├── storage/                # build output (git-ignored)
 ├── examples/               # sample data
 ├── tests/                  # conftest.py: fake embedder / LLM
+├── docker/config.yaml      # container config: host 0.0.0.0, Ollama via host.docker.internal
+├── docs/demo.tape          # vhs script that renders docs/demo.gif
 ├── .github/workflows/test.yml
 ├── scripts/verify.sh       # pre-push verification (Section 11.3)
+├── Dockerfile
+├── .dockerignore
 ├── config.example.yaml
 ├── .env.example
 └── pyproject.toml
@@ -405,7 +409,7 @@ Each phase must meet its completion criteria before moving on. One phase = one b
   - Done when: sparse + RRF applied; results improve for exact product name / ID queries
 - [x] **7. Routing + Text-to-SQL** `feat/sql`
   - Done when: "how many" and "most expensive" questions are routed to aggregate; safety tests pass
-- [ ] **8. Deployment prep** `chore/docker`
+- [x] **8. Deployment prep** `chore/docker`
   - Done when: Dockerfile, sample data, README demo GIF
 
 ---

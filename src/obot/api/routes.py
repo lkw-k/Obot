@@ -52,6 +52,8 @@ def chat(name: str, body: ChatRequest, request: Request) -> ChatResponse:
         state.get_embedder(),
         state.llm,
         state.settings.retrieval.top_k,
+        builds.storage_dir / name,
+        state.settings.routing.enabled,
     )
     result = bot.ask(body.message, [m.model_dump() for m in body.history], body.top_k)
     return ChatResponse(

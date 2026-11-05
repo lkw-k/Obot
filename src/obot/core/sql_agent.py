@@ -17,7 +17,7 @@ _ALLOWED_ACTIONS = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_F
 SYSTEM_PROMPT = (
     "You write one SQLite SELECT query that answers a question about a table.\n"
     "- Use only the given table and columns; quote column names with double quotes.\n"
-    "- Read only: SELECT or WITH, a single statement.\n"
+    "- Read only: SELECT or WITH, a single statement, no recursive CTEs.\n"
     'Reply with JSON only: {"sql": "SELECT ..."}.'
 )
 
@@ -35,7 +35,10 @@ def run_sql(db_path: str | Path, sql: str) -> list[dict[str, Any]]:
     try:
         conn.set_authorizer(_authorize)
         conn.row_factory = sqlite3.Row
-        rows = conn.execute(f"SELECT * FROM ({sql}) LIMIT {MAX_ROWS}").fetchall()
+        # Own lines so a trailing comment cannot swallow ") LIMIT"; fetchmany
+        # because an unclosed /* still can.
+        cursor = conn.execute(f"SELECT * FROM (\n{sql}\n) LIMIT {MAX_ROWS}")
+        rows = cursor.fetchmany(MAX_ROWS)
     except sqlite3.Error as e:
         raise SQLError(str(e)) from e
     finally:
@@ -47,7 +50,11 @@ def query(
     llm: LLMClient, question: str, schema: Schema, db_path: str | Path
 ) -> tuple[str, list[dict[str, Any]]] | None:
     """Generate and run SQL, retrying once with the error; None if both fail."""
-    messages = [{"role": "user", "content": _prompt(question, schema, db_path)}]
+    try:
+        prompt = _prompt(question, schema, db_path)
+    except SQLError:
+        return None
+    messages = [{"role": "user", "content": prompt}]
     for attempt in range(2):
         reply = llm.chat(SYSTEM_PROMPT, messages, json_mode=True)
         try:
@@ -72,6 +79,7 @@ def _prompt(question: str, schema: Schema, db_path: str | Path) -> str:
         types = {row[1]: row[2] for row in conn.execute(f"PRAGMA table_info({TABLE})")}
     finally:
         conn.close()
+    # _obot_id has a column but no entry in schema.fields.
     columns = "\n".join(
         f'- "{column}" {types.get(column, "")} ({roles.get(field, "id")})'
         for field, column in schema.columns.items()
@@ -87,7 +95,10 @@ def _prompt(question: str, schema: Schema, db_path: str | Path) -> str:
 
 
 def _connect_ro(db_path: str | Path) -> sqlite3.Connection:
-    return sqlite3.connect(f"{Path(db_path).resolve().as_uri()}?mode=ro", uri=True)
+    try:
+        return sqlite3.connect(f"{Path(db_path).resolve().as_uri()}?mode=ro", uri=True)
+    except sqlite3.Error as e:
+        raise SQLError(str(e)) from e
 
 
 def _authorize(action: int, *_: Any) -> int:

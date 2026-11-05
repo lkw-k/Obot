@@ -61,6 +61,33 @@ def test_results_are_limited(db):
 
 
 @pytest.mark.parametrize(
+    "sql", ["SELECT * FROM records) --", "SELECT * FROM records) /*"]
+)
+def test_comment_cannot_cut_off_the_limit(db, sql):
+    try:
+        rows = run_sql(db, sql)
+    except SQLError:
+        return
+    assert len(rows) <= MAX_ROWS
+
+
+def test_query_ending_in_a_comment_runs(db):
+    rows = run_sql(db, "SELECT COUNT(*) AS n FROM records -- total")
+
+    assert rows == [{"n": 150}]
+
+
+def test_missing_database_raises_sql_error(tmp_path):
+    with pytest.raises(SQLError):
+        run_sql(tmp_path / "missing.db", "SELECT 1")
+
+
+def test_query_falls_back_when_database_is_missing(tmp_path, fake_llm):
+    assert query(fake_llm, "q", SCHEMA, tmp_path / "missing.db") is None
+    assert fake_llm.calls == []
+
+
+@pytest.mark.parametrize(
     "sql",
     [
         "INSERT INTO records (id) VALUES ('x')",

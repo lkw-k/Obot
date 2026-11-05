@@ -162,7 +162,7 @@ obot/
 - [x] FastAPI 서버 + 자동 빌드
 - [x] 하이브리드 검색 (dense + sparse)
 - [x] 집계 질문 SQL 처리
-- [ ] Docker, 샘플 데이터, 데모 GIF
+- [x] Docker, 샘플 데이터, 데모 GIF
 
 ---
 

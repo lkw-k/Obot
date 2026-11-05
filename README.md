@@ -73,7 +73,9 @@ docker run -p 8000:8000 --env-file .env \
 - 컨테이너 설정은 `docker/config.yaml`입니다(`0.0.0.0`으로 열고, 호스트의 Ollama에 `host.docker.internal`로 연결). 바꾸려면 `-v ./my-config.yaml:/app/config.yaml`로 덮어쓰세요.
 - Linux에서는 `--add-host=host.docker.internal:host-gateway`를 추가하세요.
 - `.env`가 없으면 `--env-file`을 빼면 됩니다. 이미지에는 `.env`가 들어가지 않습니다.
+- `--env-file`은 따옴표를 벗기지 않습니다. `.env`는 따옴표 없이 `KEY=value` 형식으로 쓰세요.
 - 모델 캐시(`obot-hf`)와 빌드 결과(`obot-storage`)는 볼륨에 남아서, 재시작하면 다시 받거나 다시 빌드하지 않습니다.
+- 서버가 떠 있는 동안에는 저장소가 잠겨서 `docker exec ... obot build`나 `obot ask`를 쓸 수 없습니다. 다시 빌드하려면 `POST /bots/{name}/rebuild`를 쓰세요.
 
 ---
 

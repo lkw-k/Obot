@@ -51,7 +51,7 @@ def blocking_embedder(fake_embedder):
 
 
 class FakeLLM:
-    """Returns a fixed reply and records every call."""
+    """Returns a fixed reply (or, given a list, the next one) and records calls."""
 
     def __init__(self, reply="fake answer"):
         self.reply = reply
@@ -61,6 +61,8 @@ class FakeLLM:
         self.calls.append(
             {"system": system, "messages": messages, "json_mode": json_mode}
         )
+        if isinstance(self.reply, list):
+            return self.reply.pop(0)
         return self.reply
 
 

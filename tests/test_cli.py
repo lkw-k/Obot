@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -87,6 +88,18 @@ def test_ask_builds_then_answers_with_sources(project, llm):
     assert "sources:" in result.output
     assert result.output.count("(score ") == 5  # retrieval.top_k default
     assert "Question: who ordered?" in llm.calls[0]["messages"][-1]["content"]
+
+
+def test_ask_aggregate_prints_sql(project, llm):
+    sql = "SELECT COUNT(*) AS n FROM records"
+    llm.reply = ['{"route": "aggregate"}', json.dumps({"sql": sql}), "28 orders"]
+
+    result = runner.invoke(cli.app, ["ask", "orders", "how many orders?"])
+
+    assert result.exit_code == 0, result.output
+    assert "28 orders" in result.output
+    assert f"sql: {sql}" in result.output
+    assert "sources:" not in result.output
 
 
 def test_ask_unknown_bot_fails(project, llm):

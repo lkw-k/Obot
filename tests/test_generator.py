@@ -1,4 +1,9 @@
-from obot.core.generator import HISTORY_LIMIT, SYSTEM_PROMPT, generate_answer
+from obot.core.generator import (
+    HISTORY_LIMIT,
+    SYSTEM_PROMPT,
+    generate_answer,
+    generate_sql_answer,
+)
 from obot.core.store import Hit
 
 
@@ -30,3 +35,22 @@ def test_history_keeps_last_messages(fake_llm):
 
     messages = fake_llm.calls[0]["messages"]
     assert messages[:-1] == history[-HISTORY_LIMIT:]
+
+
+def test_sql_prompt_contains_query_and_rows(fake_llm):
+    history = [{"role": "user", "content": "hi"}]
+
+    generate_sql_answer(fake_llm, "가장 비싼?", "SELECT 1", [{"이름": "a"}], history)
+
+    (call,) = fake_llm.calls
+    assert call["system"] == SYSTEM_PROMPT
+    assert call["messages"][:-1] == history
+    assert call["messages"][-1]["content"] == (
+        'Context:\nSQL: SELECT 1\nRows: [{"이름": "a"}]\n\nQuestion: 가장 비싼?'
+    )
+
+
+def test_empty_sql_result_is_marked(fake_llm):
+    generate_sql_answer(fake_llm, "q", "SELECT 1", [], [])
+
+    assert "Rows: (no rows)" in fake_llm.calls[0]["messages"][-1]["content"]

@@ -87,13 +87,22 @@ def ask(
             build_bot(bot, settings, get_embedder, qdrant, STORAGE_DIR)
             llm = create_llm(settings.llm, settings.secrets)
             result = Bot(
-                name, qdrant, get_embedder(), llm, settings.retrieval.top_k
+                name,
+                qdrant,
+                get_embedder(),
+                llm,
+                settings.retrieval.top_k,
+                STORAGE_DIR / name,
+                settings.routing.enabled,
             ).ask(question)
         finally:
             qdrant.close()
     except (ConfigError, LoadError, StoreLockedError, LLMError) as e:
         _fail(str(e))
     typer.echo(result.answer)
+    if result.sql is not None:
+        typer.echo(f"\nsql: {result.sql['query']}")
+        return
     typer.echo("\nsources:")
     for hit in result.sources:
         typer.echo(f"  {hit.record_id} (score {hit.score:.3f})")

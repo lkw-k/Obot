@@ -1,3 +1,4 @@
+import json
 import shutil
 import time
 from pathlib import Path
@@ -74,6 +75,20 @@ def test_chat_returns_answer_with_sources(client):
     assert body["sql"] is None
     assert len(body["sources"]) == 5
     assert {"id", "score", "record"} <= body["sources"][0].keys()
+
+
+def test_aggregate_chat_returns_sql_and_no_sources(client, fake_llm):
+    sql = "SELECT COUNT(*) AS n FROM records"
+    fake_llm.reply = ['{"route": "aggregate"}', json.dumps({"sql": sql}), "28"]
+
+    response = client.post("/bots/orders/chat", json={"message": "how many?"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == "28"
+    assert body["route"] == "aggregate"
+    assert body["sources"] == []
+    assert body["sql"] == {"query": sql, "rows": [{"n": 28}]}
 
 
 def test_chat_sources_carry_rrf_scores(client):

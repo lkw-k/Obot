@@ -1,5 +1,8 @@
 """Prompt building and answer generation (spec §6.4)."""
 
+import json
+from typing import Any
+
 from obot.core.chunker import chunk_text
 from obot.core.store import Hit
 from obot.llm.base import LLMClient
@@ -20,5 +23,18 @@ def generate_answer(
 ) -> str:
     context = "\n\n".join(f"[id: {h.record_id}]\n{chunk_text(h.record)}" for h in hits)
     prompt = f"Context:\n{context or '(no records found)'}\n\nQuestion: {question}"
+    messages = [*history[-HISTORY_LIMIT:], {"role": "user", "content": prompt}]
+    return llm.chat(SYSTEM_PROMPT, messages)
+
+
+def generate_sql_answer(
+    llm: LLMClient,
+    question: str,
+    sql: str,
+    rows: list[dict[str, Any]],
+    history: list[dict],
+) -> str:
+    data = json.dumps(rows, ensure_ascii=False) if rows else "(no rows)"
+    prompt = f"Context:\nSQL: {sql}\nRows: {data}\n\nQuestion: {question}"
     messages = [*history[-HISTORY_LIMIT:], {"role": "user", "content": prompt}]
     return llm.chat(SYSTEM_PROMPT, messages)

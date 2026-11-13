@@ -1,5 +1,7 @@
 import json
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -134,3 +136,11 @@ def test_serve_locked_storage_fails(project, llm):
         holder.close()
     assert result.exit_code == 1
     assert "in use by another process" in result.output
+
+
+def test_python_m_obot_runs_cli():
+    result = subprocess.run(
+        [sys.executable, "-m", "obot", "--help"], capture_output=True, text=True
+    )
+    assert result.returncode == 0
+    assert "Usage: obot" in result.stdout

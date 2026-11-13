@@ -2,4 +2,5 @@
 
 from obot.cli import app
 
-app(prog_name="obot")
+if __name__ == "__main__":
+    app(prog_name="obot")

@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -143,4 +144,6 @@ def test_python_m_obot_runs_cli():
         [sys.executable, "-m", "obot", "--help"], capture_output=True, text=True
     )
     assert result.returncode == 0
-    assert "Usage: obot" in result.stdout
+    # CI forces Rich color output; strip ANSI codes before matching.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
+    assert "Usage: obot" in plain

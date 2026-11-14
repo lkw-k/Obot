@@ -71,7 +71,8 @@ obot/
 │   │   ├── schemas.py      # request/response models
 │   │   └── auth.py
 │   ├── config.py           # settings, bot discovery, name normalization / collision check
-│   └── cli.py
+│   ├── cli.py
+│   └── __main__.py         # `python -m obot` → cli.app
 ├── data/                   # user data (git-ignored, only .gitkeep committed)
 ├── storage/                # build output (git-ignored)
 ├── examples/               # sample data
@@ -375,6 +376,8 @@ obot serve                    # run the server (includes auto-build)
 obot build [--bot NAME]       # build only
 obot ask NAME "question"      # ask from the terminal without the server
 ```
+
+`python -m obot ...` runs the same CLI. Use it where the generated `obot.exe` launcher is blocked (e.g. Windows Smart App Control / WDAC, os error 4551).
 
 ---
 

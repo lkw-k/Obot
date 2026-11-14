@@ -1,5 +1,8 @@
 import json
+import re
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -134,3 +137,13 @@ def test_serve_locked_storage_fails(project, llm):
         holder.close()
     assert result.exit_code == 1
     assert "in use by another process" in result.output
+
+
+def test_python_m_obot_runs_cli():
+    result = subprocess.run(
+        [sys.executable, "-m", "obot", "--help"], capture_output=True, text=True
+    )
+    assert result.returncode == 0
+    # CI forces Rich color output; strip ANSI codes before matching.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
+    assert "Usage: obot" in plain
